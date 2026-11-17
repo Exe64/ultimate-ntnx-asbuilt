@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  # A v* tag publishes the five executables: bun cross-compiles every target from this one runner.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  # Application desktop Windows : Electrobun ne compile pas en croisé, d'où un runner Windows.
+  # Sur un tag, l'installeur s'ajoute à la release créée par le job précédent ; à la demande
+  # (workflow_dispatch), il reste un artefact du workflow, pour tester un prototype.
+  desktop-windows:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build:desktop
+      # Smoke test: the packaged app must start its server and serve the page.
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          # build/ holds the self-extractor; unpack the app archive as the installer does.
+          $zst = Get-ChildItem build -Recurse -Filter *.tar.zst | Where-Object { $_.Directory.Name -eq 'Resources' } | Select-Object -First 1
+          New-Item -ItemType Directory smoke | Out-Null
+          tar -xf $zst.FullName -C smoke
+          $exe = Get-ChildItem smoke -Recurse -Filter launcher.exe | Select-Object -First 1
+          Write-Host "launching $($exe.FullName)"
+          # Task Manager names the app after bun.exe's description (postBuild hook).
+          $desc = (Get-Item (Join-Path $exe.DirectoryName 'bun.exe')).VersionInfo.FileDescription
+          Write-Host "bun.exe description: $desc"
+          if ($desc -ne 'Ultimate As-Built Generator') { throw "bun.exe still described as '$desc'" }
+          $env:ELECTROBUN_CONSOLE = '1'
+          # Start elsewhere than the app folder, as a Start-menu launch does.
+          $p = Start-Process $exe.FullName -WorkingDirectory $env:SystemRoot -PassThru -RedirectStandardOutput "$PWD\out.txt" -RedirectStandardError "$PWD\err.txt"
+          Start-Sleep 25
+          Write-Host "--- stdout"; Get-Content out.txt -ErrorAction SilentlyContinue
+          Write-Host "--- stderr"; Get-Content err.txt -ErrorAction SilentlyContinue
+          Write-Host "--- running: $(-not $p.HasExited)"
+          $url = Select-String -Path out.txt -Pattern 'http://127\.0\.0\.1:\d+/' | ForEach-Object { $_.Matches[0].Value } | Select-Object -First 1
+          try {
+            if (-not $url) { throw 'server URL not found in app output' }
+            $r = Invoke-WebRequest $url -UseBasicParsing
+            if ($r.StatusCode -ne 200) { throw "page returned $($r.StatusCode)" }
+            # The page is useless without its script: it must be served, as JavaScript, and whole.
+            $src = [regex]::Match($r.Content, '<script[^>]+src="([^"]+)"').Groups[1].Value
+            $js = Invoke-WebRequest ([Uri]::new([Uri]$url, $src)) -UseBasicParsing
+            Write-Host "script $src -> $($js.StatusCode) $($js.Headers['Content-Type']) $($js.RawContentLength) bytes"
+            Write-Host $js.Content.Substring(0, [Math]::Min(300, $js.Content.Length))
+            if ($js.StatusCode -ne 200 -or $js.Content -notmatch '/api/import') { throw 'page script missing or incomplete' }
+            # A webview rejects the whole module on a Node import: the page must be built for the browser.
+            if ($js.Content -match 'from\s*"node:') { throw 'page script was built for Bun, not the browser' }
+          } finally {
+            Get-Process | Where-Object { $_.Path -like '*UltimateAs-Built*' } | Stop-Process -Force
+          }
+      # Portable exe with our icon: --windows-icon only works when compiling on Windows, so this
+      # build replaces the cross-compiled one the release job publishes.
+      - name: Portable exe
+        shell: bash
+        run: npx bun build server/main.js --compile --minify --target=bun-windows-x64 --windows-icon=assets/icon.ico --outfile=ultimate-asbuilt-windows-x64.exe
+      - name: Smoke test portable exe
+        shell: pwsh
+        run: |
+          $env:NO_OPEN = '1'
+          $p = Start-Process .\ultimate-asbuilt-windows-x64.exe -PassThru -RedirectStandardOutput "$PWD\exe-out.txt"
+          Start-Sleep 10
+          try {
+            $url = Select-String -Path exe-out.txt -Pattern 'http://127\.0\.0\.1:\d+/' | ForEach-Object { $_.Matches[0].Value } | Select-Object -First 1
+            if (-not $url) { throw 'server URL not found in exe output' }
+            $r = Invoke-WebRequest $url -UseBasicParsing
+            Write-Host "portable exe -> $url $($r.StatusCode)"
+            if ($r.StatusCode -ne 200) { throw "page returned $($r.StatusCode)" }
+          } finally { Stop-Process $p -Force -ErrorAction SilentlyContinue }
+      - name: Rename installer
+        shell: bash
+        run: mv artifacts/*Setup.zip ultimate-asbuilt-windows-x64-Setup.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ultimate-asbuilt-windows-x64-Setup
+          path: ultimate-asbuilt-windows-x64-Setup.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ultimate-asbuilt-windows-x64
+          path: ultimate-asbuilt-windows-x64.exe
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          # The release job creates the release; wait for it rather than racing it.
+          for i in $(seq 30); do gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 && break; sleep 10; done
+          gh release upload "$GITHUB_REF_NAME" ultimate-asbuilt-windows-x64-Setup.zip ultimate-asbuilt-windows-x64.exe --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}

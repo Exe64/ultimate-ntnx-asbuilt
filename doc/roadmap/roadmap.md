@@ -1,0 +1,54 @@
+# Roadmap Ultimate As-Built
+
+> Backlog actif. L'historique détaillé est archivé dans `_archives/`.
+> Dernière mise à jour : 2026-11-18.
+
+## Contexte
+
+Backlog consolidé : plans nommés d'après leur issue GitHub (voir `doc/roadmap/`).
+- « À faire » : travaux restants, triés par priorité.
+- « Fait » : ce qui a été livré et validé.
+
+---
+
+## À faire
+
+Ordre de réalisation : #9.
+
+### [Issue: #9] Application desktop Windows (Electrobun) [PRIORITÉ: MOYENNE] [Complexité: L] 🟢
+
+Plan : [`9-app-desktop-windows.md`](9-app-desktop-windows.md)
+
+Sous Windows 11, fenêtre native Electrobun sans console ni navigateur ; installeur ajouté à la release à côté de l'exe portable. Prototype d'abord, test manuel Windows à l'étape 2.
+
+---
+
+## Fait
+
+### Plans livrés (2026-10-12 → 2026-11-18)
+- **[Issue: #1] `#1` — CI de tests et release des exécutables sur tag** (2026-10-12) 🔵 — CI de tests à chaque push ; release v0.1.0 publiée avec les cinq exécutables depuis un tag.
+  [`1-ci-release.md`](done/1-ci-release.md)
+- **[Issue: #2] `#2` — Tests du serveur et du template, correctif du téléchargement** (2026-10-12) 🔵 — Jeton, routes et contrôle du template couverts par quatre nouveaux tests ; URL de téléchargement révoquée après un délai.
+  [`2-tests-serveur-template.md`](done/2-tests-serveur-template.md)
+- **[Issue: #4] `#4` — Export / import de la collecte** (2026-10-12) 🔵 — Export de la collecte et des saisies en JSON sans identifiants, import sur page neuve avec rechargement du serveur, refus des fichiers invalides.
+  [`4-export-import-collecte.md`](done/4-export-import-collecte.md)
+- **[Issue: #8] `#8` — Template générique** (2026-11-17) 🔵 — Ancienne charte retirée du template et du code ; palette violet et vert Nutanix, couverture à bandeau image ; release v0.2.1.
+  [`8-template-generique.md`](done/8-template-generique.md)
+- **[Issue: #3] `#3` — Mise à jour du moteur** (2026-11-17) 🔵 — Moteur mis à jour avec apiCompat, code local adapté, script de synchro supprimé ; trois chemins de collecteurs corrigés ; lab validé (six schémas, chapitres Présentation / Prism Central / Sécurité).
+  [`3-mise-a-jour-moteur.md`](done/3-mise-a-jour-moteur.md)
+- **[Issue: #5] `#5` — Robustesse de collecte et avancement par cluster** (2026-11-17) 🔵 — Parallélisme borné, délai réglable, avancement par cluster ; un seul essai d'authentification avant la collecte (plus de verrouillage de compte) ; lab validé.
+  [`5-robustesse-avancement.md`](done/5-robustesse-avancement.md)
+- **[Issue: #10] `#10` — Fiche du Prism Central** (2026-11-17) 🔵 — Informations, adressage, CPU et mémoire, versions LCM du PC (API v4 domain-managers) ; tableaux clé/valeur sans en-tête, en-têtes en blanc ; lab validé.
+  [`10-fiche-prism-central.md`](done/10-fiche-prism-central.md)
+- **[Issue: #6] `#6` — Nouvelles sections du document** (2026-11-17) 🔵 — Syslog, proxy, certificat, chiffrement, images, Flow (politiques, VPC), Files, Objects, Volumes ; secrets retirés du bundle ; services non déployés en « Non configuré » ; lab validé. Witness reporté.
+  [`6-nouvelles-sections.md`](done/6-nouvelles-sections.md)
+- **[Issue: #7] `#7` — Interface bilingue** (2026-11-17) 🔵 — Page en français ou en anglais (langue du navigateur par défaut, mémorisée), bascule liée à la langue du document, messages du serveur traduits ; test de couverture des libellés.
+  [`7-interface-bilingue.md`](done/7-interface-bilingue.md)
+- **[Issue: #11] `#11` — Thème sombre et habillage de l'interface** (2026-11-17) 🔵 — Sombre par défaut avec bascule Clair ; en-tête à bannière fine et nouveau logo ; étapes, cartes, champs et états dans la palette du template ; contraste AA testé ; revue visuelle validée.
+  [`11-theme-sombre-habillage.md`](done/11-theme-sombre-habillage.md)
+- **[Issue: #12] `#12` — Pied de page, Ko-fi et nouveau nom** (2026-11-18) 🔵 — Pied de page (version, signature, © Tous droits réservés, non-affiliation Nutanix, liens GitHub et Blog selon la langue) ; bouton Ko-fi avec logo officiel ; application renommée « Ultimate As-Built Generator » (page, fenêtre, build, README).
+  [`12-copyright-pied-de-page.md`](done/12-copyright-pied-de-page.md)
+
+---
+
+## Archivé

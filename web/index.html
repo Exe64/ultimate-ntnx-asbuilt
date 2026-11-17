@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ultimate As-Built Generator</title>
+<link rel="icon" type="image/png" href="../assets/logo.png">
+<script>
+  // Dark by default; a stored light choice is applied before the first paint, so it never flashes dark.
+  try { if (localStorage.getItem('theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch {}
+</script>
+<style>
+  /* One token = light-dark(light, dark). Dark by default; data-theme=light switches. */
+  :root {
+    color-scheme: dark;
+    --bg: light-dark(#f5f4f9, #131317);
+    --surface: light-dark(#ffffff, #1f1f24);
+    --field: light-dark(#ffffff, #17171b);
+    --text: light-dark(#1f1f24, #ecebf2);
+    --muted: light-dark(#5f5c6e, #a9a6b8);
+    --line: light-dark(#e2e0ea, #33323b);
+    --line-strong: light-dark(#c4c1d1, #4a4955);
+    --accent: #7855fa;
+    --accent-ink: #ffffff;
+    --accent-text: light-dark(#5b3bd9, #a996ff);
+    --accent-soft: light-dark(#efebff, #2a2540);
+    --green: #b0d235;
+    --ok: light-dark(#3d6b0c, #b0d235);
+    --ko: light-dark(#c42b2b, #ff7b7b);
+    --shadow: light-dark(0 1px 2px rgb(31 31 36 / .06), 0 1px 2px rgb(0 0 0 / .3)),
+              light-dark(0 8px 24px -12px rgb(60 40 140 / .18), 0 8px 24px -12px rgb(0 0 0 / .5));
+  }
+  :root[data-theme=light] { color-scheme: light; }
+
+  body { font: 14px/1.5 system-ui, 'Segoe UI', sans-serif; max-width: 880px; margin: 0 auto; padding: 0 16px 64px;
+    background: var(--bg); color: var(--text); accent-color: var(--accent); scrollbar-color: var(--line-strong) var(--bg); }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+  :focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+  a { color: var(--accent-text); text-underline-offset: 2px; }
+  footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 12px; }
+  footer p { margin: 4px 0; }
+  footer a { margin-left: 12px; }
+
+  /* Banner band: dark in both themes, like the Word cover, so its controls use the dark tokens. */
+  header { color-scheme: dark; color: var(--text); display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px;
+    min-height: 120px; box-sizing: border-box; padding: 24px 28px; margin: 16px 0 24px; border-radius: 12px;
+    border-bottom: 3px solid var(--green); box-shadow: var(--shadow); background: #1c2023;
+    position: relative; isolation: isolate; overflow: hidden; }
+  header .banner { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: right center; }
+  header::before { content: ''; position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(90deg, #1c2023 40%, rgb(28 32 35 / .55) 70%, transparent); }
+  .brand { display: flex; align-items: center; gap: 16px; flex: 1 1 320px; }
+  /* lighten: the logo's own dark square melts into the band, only the mark shows. */
+  .brand img { width: 88px; height: 88px; mix-blend-mode: lighten; }
+  h1 { font-size: 24px; line-height: 1.2; letter-spacing: -.01em; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0; text-wrap: balance; }
+  @media (max-width: 600px) { header { padding: 20px; } }
+  /* Grid, not flex-wrap: the Ko-fi row must not widen the block, or it drops under the title. */
+  .controls { display: grid; grid-template-columns: auto auto; gap: 10px 16px; align-items: center; }
+  .controls > label, .seg { display: flex; gap: 8px; align-items: center; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .controls select { width: auto; margin-top: 0; padding: 5px 8px; }
+  .seg .opts { display: flex; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--field); }
+  .seg label { padding: 4px 10px; border-radius: 6px; font-weight: 500; color: var(--muted); cursor: pointer; transition: background .12s, color .12s; }
+  .seg label:hover { color: var(--text); }
+  .seg label:has(:checked) { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+  .seg label:has(:focus-visible) { outline: 2px solid var(--accent-text); outline-offset: 1px; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  /* Own row under the language and theme controls. */
+  .kofi { grid-column: 1 / -1; justify-self: end; padding: 6px 14px; border-radius: 10px; background: var(--accent); color: var(--accent-ink);
+    font-size: 13px; font-weight: 600; text-decoration: none; transition: filter .12s;
+    display: inline-flex; align-items: center; gap: 8px; }
+  .kofi img { object-fit: contain; }
+  .kofi:hover { filter: brightness(1.12); }
+
+  section { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 22px 24px; margin-bottom: 16px;
+    box-shadow: var(--shadow); }
+  h2 { display: flex; align-items: center; gap: 10px; font-size: 16px; margin: 0 0 16px; }
+  h2 .num { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-size: 13px;
+    background: var(--accent-soft); color: var(--accent-text); font-variant-numeric: tabular-nums; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .grid.spaced { margin-top: 16px; }
+  label { display: block; font-size: 12px; font-weight: 600; }
+  label.check { font-weight: 400; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+  label.check.spaced { margin-top: 12px; }
+  input[type=text], input[type=password], input[type=number], select {
+    width: 100%; box-sizing: border-box; margin-top: 4px; padding: 7px 9px; font: inherit;
+    border: 1px solid var(--line-strong); border-radius: 7px; background: var(--field); color: inherit;
+    transition: border-color .12s, box-shadow .12s; }
+  input:hover, select:hover { border-color: var(--muted); }
+  input:focus-visible, select:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  ::placeholder { color: var(--muted); opacity: 1; }
+  input[type=file] { display: block; margin-top: 6px; font: inherit; font-weight: 400; color: var(--muted); }
+  ::file-selector-button { font: inherit; font-weight: 600; margin-right: 10px; padding: 6px 12px; cursor: pointer;
+    border: 1px solid var(--line-strong); border-radius: 7px; background: var(--field); color: var(--text); }
+  ::file-selector-button:hover { border-color: var(--accent); color: var(--accent-text); }
+  button { font: inherit; font-weight: 600; padding: 9px 18px; border: 1px solid transparent; border-radius: 8px;
+    background: var(--accent); color: var(--accent-ink); cursor: pointer; margin-top: 16px; transition: background .12s, border-color .12s; }
+  button:hover { background: color-mix(in srgb, var(--accent) 85%, #000); }
+  button:disabled { opacity: .5; cursor: progress; }
+  button.ghost { background: transparent; color: var(--text); border-color: var(--line-strong); font-weight: 500; margin-right: 8px; }
+  button.ghost:hover { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
+  fieldset { border: 0; border-top: 1px solid var(--line); padding: 14px 0 0; margin: 18px 0 0; min-width: 0; }
+  legend { font-weight: 700; padding-right: 8px; }
+  .cols { columns: 2 260px; }
+  .cols label { break-inside: avoid; padding: 2px 0; }
+  .chapter { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 12px 0 4px; break-after: avoid; }
+  #status { margin-top: 12px; min-height: 1.5em; color: var(--muted); }
+  #status.error { color: var(--ko); font-weight: 600; }
+  ul.log { margin: 0; padding-left: 18px; font-size: 13px; }
+  ul.log small { color: var(--muted); }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th { text-align: left; font-size: 12px; color: var(--muted); padding: 0 8px 6px 0; border-bottom: 1px solid var(--line); }
+  td { padding: 6px 8px 6px 0; vertical-align: middle; font-size: 13px; }
+  td input { margin-top: 0 !important; min-width: 120px; }
+  td.ok, td.ko { font-weight: 600; white-space: nowrap; }
+  td.ok { color: var(--ok); } td.ko { color: var(--ko); white-space: normal; }
+  td.ok::before, td.ko::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: currentColor; margin-right: 6px; vertical-align: 1px; }
+  .hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+  .hint.lead { margin: 0 0 12px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <img class="banner" src="../assets/banner.jpg" alt="">
+  <div class="brand">
+    <img src="../assets/logo.png" alt="" width="88" height="88">
+    <div>
+      <h1>Ultimate As-Built Generator</h1>
+      <p class="sub">Dossier as-built Nutanix, prêt à livrer : connexion au Prism Central, collecte, document Word.</p>
+    </div>
+  </div>
+  <div class="controls">
+    <label>Langue<select id="pageLang"><option value="fr">Français</option><option value="en">English</option></select></label>
+    <div class="seg" role="radiogroup" aria-labelledby="themeLabel">
+      <span id="themeLabel">Thème</span>
+      <div class="opts">
+        <label><input type="radio" name="theme" value="light">Clair</label>
+        <label><input type="radio" name="theme" value="dark">Sombre</label>
+      </div>
+    </div>
+    <a class="kofi" href="https://ko-fi.com/juliendumur" target="_blank" rel="noopener"><img src="../assets/kofi.png" alt="" width="22" height="18">Vous aimez l'appli ? Offrez-moi un Ko-fi</a>
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">1</span>Prism Central</h2>
+  <form id="connect">
+    <div class="grid">
+      <label>Prism Central (IP ou FQDN)<input type="text" name="pcHost" required placeholder="pc.exemple.local"></label>
+      <label>Utilisateur<input type="text" name="pcUser" required value="admin" autocomplete="username"></label>
+      <label>Mot de passe<input type="password" name="pcPass" required autocomplete="current-password"></label>
+    </div>
+    <label class="check spaced"><input type="checkbox" name="ignoreSSL" checked> Accepter les certificats auto-signés</label>
+    <p class="hint">Lecture seule : un compte « Viewer » suffit. Les mots de passe ne sont ni stockés ni écrits dans le document.</p>
+    <button type="submit">Détecter les clusters</button>
+  </form>
+  <fieldset>
+    <legend>Reprendre une collecte</legend>
+    <label>Collecte exportée (.json)<input type="file" id="importFile" accept=".json,application/json"></label>
+    <p class="hint">Recharge la collecte et les saisies d'un fichier exporté à l'étape 3 : le document se régénère sans
+      réinterroger Prism. Le fichier ne contient aucun identifiant.</p>
+  </fieldset>
+</section>
+
+<section id="pe" hidden>
+  <h2><span class="num">2</span>Prism Element</h2>
+  <p class="hint lead">Clusters déclarés par le Prism Central. Chacun se collecte avec ses propres identifiants ;
+    une ligne laissée sans mot de passe est documentée depuis le Prism Central seul.</p>
+  <form id="peForm">
+    <div class="scroll"><table>
+      <thead><tr><th>Cluster</th><th>Adresse</th><th>Utilisateur</th><th>Mot de passe</th><th>État</th></tr></thead>
+      <tbody id="peRows"></tbody>
+    </table></div>
+    <button type="button" id="peCopy" class="ghost">Recopier la première ligne sur les autres</button>
+    <button type="submit">Collecter les Prism Element</button>
+  </form>
+</section>
+
+<section id="doc" hidden>
+  <h2><span class="num">3</span>Document</h2>
+  <ul class="log" id="log"></ul>
+  <form id="generate">
+    <div class="grid spaced">
+      <label>Client<input type="text" name="client"></label>
+      <label>Projet<input type="text" name="projet"></label>
+      <label>Intégrateur<input type="text" name="integrateur"></label>
+      <label>Langue<select name="lang"><option value="fr">Français</option><option value="en">English</option></select></label>
+    </div>
+    <div id="clusters"></div>
+    <fieldset>
+      <legend>Sections</legend>
+      <div class="cols" id="sections"></div>
+      <label class="check spaced"><input type="checkbox" name="hideEmpty" checked> Retirer les sections et les lignes non collectées (au lieu de « Non collecté ») ; « Non configuré » reste dit</label>
+    </fieldset>
+    <fieldset>
+      <legend>Charte</legend>
+      <label>Template Word (.docx) — facultatif, celui livré sert par défaut<input type="file" name="template" accept=".docx"></label>
+      <p class="hint">Un template personnel doit contenir le marqueur {{corps}} et un style de tableau « AsBuiltTable ».
+        <a href="/template.docx" download="asbuilt-template.docx">Télécharger le template par défaut</a> pour le retoucher dans Word.</p>
+    </fieldset>
+    <button type="button" id="exportBtn" class="ghost">Exporter la collecte</button>
+    <button type="submit">Générer le .docx</button>
+  </form>
+</section>
+
+<div id="status" role="status"></div>
+<footer>
+  <p>Ultimate As-Built Generator <span id="appVersion"></span> · Conçu par Julien Dumur · © 2026 Tous droits réservés.
+    <a href="https://github.com/Exe64" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://juliendumur.fr" data-href-en="https://juliendumur.fr/en/" target="_blank" rel="noopener">Blog</a></p>
+  <p>Outil indépendant, non affilié à Nutanix, Inc.</p>
+</footer>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

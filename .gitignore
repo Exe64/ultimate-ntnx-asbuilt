@@ -1,0 +1,11 @@
+node_modules/
+dist/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+
+# Electrobun (application desktop Windows) : sorties de build et devkit Hutch.
+build/
+artifacts/
+dist-web/
+.hutch/

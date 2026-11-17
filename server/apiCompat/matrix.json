@@ -1,0 +1,51 @@
+{
+  "_comment": "Source of truth for outbound API compatibility. Read by backend/src/apiCompat (Node) and by services/audit-worker/ntnx_audit/api_compat.py (Python, byte-identical copy checked by apiCompat.test.js). Edit here, then copy to services/audit-worker/ntnx_audit/api_matrix.json.",
+  "products": {
+    "pc":      { "label": "Prism Central", "min": "2024.1" },
+    "aos":     { "label": "AOS",           "min": "6.8" },
+    "move":    { "label": "Nutanix Move",  "min": "5.0" },
+    "vcenter": { "label": "vCenter",       "min": "7.0" }
+  },
+  "apis": {
+    "prism.v1":     { "base": "/PrismGateway/services/rest/v1",   "min": { "aos": "5.0", "pc": "5.0" } },
+    "prism.v2":     { "base": "/PrismGateway/services/rest/v2.0", "min": { "aos": "5.0", "pc": "5.0" } },
+    "prism.v3":     { "base": "/api/nutanix/v3",                  "min": { "aos": "5.0", "pc": "5.0" } },
+    "prism.v4":     { "base": "/api/{namespace}/{version}",       "min": { "pc": "2024.1" } },
+    "move.v2":      { "base": "/move/v2",                         "min": { "move": "4.0" } },
+    "vcenter.api":  { "base": "/api",                             "min": { "vcenter": "7.0" } },
+    "vcenter.rest": { "base": "/rest",                            "min": { "vcenter": "6.5" } },
+    "vcenter.sdk":  { "base": "/sdk",                             "min": { "vcenter": "6.5" } }
+  },
+  "v4": {
+    "defaults": {
+      "clustermgmt": "v4.0", "vmm": "v4.0", "networking": "v4.3", "iam": "v4.0",
+      "monitoring": "v4.0", "dataprotection": "v4.0", "lifecycle": "v4.0", "prism": "v4.0",
+      "volumes": "v4.0", "storage": "v4.0", "licensing": "v4.0", "microseg": "v4.0",
+      "aiops": "v4.0", "security": "v4.0", "files": "v4.0", "objects": "v4.0",
+      "multidomain": "v4.0", "datapolicies": "v4.0"
+    }
+  },
+  "capabilities": {
+    "pc.clusters":                 [{ "api": "prism.v4", "namespace": "clustermgmt", "path": "/config/clusters" },
+                                    { "api": "prism.v3", "path": "/clusters" }],
+    "pc.storageContainers":        [{ "api": "prism.v4", "namespace": "clustermgmt", "path": "/config/storage-containers" }],
+    "pc.vms":                      [{ "api": "prism.v4", "namespace": "vmm", "path": "/ahv/config/vms" },
+                                    { "api": "prism.v3", "path": "/vms" }],
+    "pc.vmHostAffinityPolicies":   [{ "api": "prism.v4", "namespace": "vmm", "path": "/ahv/policies/vm-host-affinity-policies" }],
+    "pc.users":                    [{ "api": "prism.v3", "path": "/users" },
+                                    { "api": "prism.v4", "namespace": "iam", "path": "/authn/users" }],
+    "pc.alerts":                   [{ "api": "prism.v4", "namespace": "monitoring", "path": "/serviceability/alerts" },
+                                    { "api": "prism.v3", "path": "/alerts" }],
+    "pc.iam.roles":                [{ "api": "prism.v4", "namespace": "iam", "path": "/authz/roles" }],
+    "pc.iam.users":                [{ "api": "prism.v4", "namespace": "iam", "path": "/authn/users" }],
+    "pc.iam.policies":             [{ "api": "prism.v4", "namespace": "iam", "path": "/authz/authorization-policies" }],
+    "pc.iam.operations":           [{ "api": "prism.v4", "namespace": "iam", "path": "/authz/operations" }],
+    "pc.virtualSwitches":          [{ "api": "prism.v4", "namespace": "networking", "path": "/config/virtual-switches" }],
+    "pc.subnets":                  [{ "api": "prism.v4", "namespace": "networking", "path": "/config/subnets" }],
+    "pc.subnets.reserveIps":       [{ "api": "prism.v4", "namespace": "networking", "path": "/config/subnets" }],
+    "pc.vpcs":                     [{ "api": "prism.v4", "namespace": "networking", "path": "/config/vpcs" }],
+    "pc.tasks":                    [{ "api": "prism.v4", "namespace": "prism", "path": "/config/tasks" }],
+    "vc.session":                  [{ "api": "vcenter.api",  "path": "/session" },
+                                    { "api": "vcenter.rest", "path": "/com/vmware/cis/session" }]
+  }
+}
