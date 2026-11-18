@@ -52,11 +52,16 @@ function status(text, error = false) {
   $('status').className = error ? 'error' : '';
 }
 
+// Collections and generations under way: an update restarts the app, so it waits for them.
+let working = 0;
+
 async function busy(form, label, fn) {
   const btn = form.querySelector('button[type=submit]');
   btn.disabled = true;
+  working++; refreshUpdate();
   status(label);
   try { await fn(); } catch (err) { status(err.message || String(err), true); }
+  working--; refreshUpdate();
   btn.disabled = false;
 }
 
@@ -283,7 +288,46 @@ for (const input of document.querySelectorAll('input[name=theme]')) {
   });
 }
 
+// New version, checked once by the server at launch. Desktop: one click installs and restarts;
+// portable executables: a link to the release. Offline or up to date: the band stays hidden.
+let update = null, applying = false;
+function refreshUpdate() {
+  $('updateBtn').disabled = $('updateConfirm').disabled = applying || working > 0;
+  $('updateBtn').title = working > 0 ? 'Disponible une fois la collecte ou la génération terminée' : '';
+}
+async function showUpdate() {
+  try {
+    const res = await fetch('/api/update', { headers: { 'x-token': token } });
+    if (res.ok) update = await res.json();
+  } catch { /* offline: nothing to say */ }
+  if (!update?.available) return;
+  $('updateText').textContent = `Version ${update.version} disponible.`;
+  $('updateBtn').hidden = !update.canApply;
+  Object.assign($('updateLink'), { hidden: update.canApply || !update.url, href: update.url || '' });
+  $('update').hidden = false;
+  refreshUpdate();
+}
+async function applyUpdate() {
+  applying = true; refreshUpdate();
+  status('Téléchargement de la mise à jour…');
+  try {
+    await post('/api/update/apply', {});
+    status('Redémarrage sur la nouvelle version…');
+  } catch (err) {
+    applying = false; refreshUpdate();
+    status(err.message || String(err), true);
+  }
+}
+// A collection on screen may hold inputs not exported yet: say so, and ask a second click.
+$('updateBtn').addEventListener('click', () => {
+  if (!bundle) return applyUpdate();
+  $('updateBtn').hidden = true;
+  $('updateWarn').hidden = $('updateConfirm').hidden = false;
+});
+$('updateConfirm').addEventListener('click', applyUpdate);
+
 $('pageLang').addEventListener('change', (ev) => applyLang(ev.target.value));
 $('generate').elements.lang.addEventListener('change', (ev) => applyLang(ev.target.value));
 startI18n(lang);
 applyLang(lang);
+showUpdate();

@@ -65,6 +65,14 @@ export const EN = {
   'Lecture de la collecte…': 'Reading the collection…',
   'Génération…': 'Generating…',
   'Document généré.': 'Document generated.',
+  // New version band
+  "La mise à jour redémarre l'application : les saisies non exportées seront perdues.":
+    'Updating restarts the application: inputs not exported will be lost.',
+  'Mettre à jour': 'Update',
+  'Redémarrer et mettre à jour': 'Restart and update',
+  'Voir la release': 'See the release',
+  'Téléchargement de la mise à jour…': 'Downloading the update…',
+  'Redémarrage sur la nouvelle version…': 'Restarting on the new version…',
 };
 
 // Strings with variable parts, matched whole; `$n` are the captured parts.
@@ -76,6 +84,7 @@ const PATTERNS = [
   [/^(\d+)\/(\d+) collecteurs$/, '$1/$2 collectors'],
   [/^· sans réponse : (.*)$/, '· no response: $1'],
   [/^non collecté \((.*)\)$/, 'not collected ($1)'],
+  [/^Version (\S+) disponible\.$/, 'Version $1 available.'],
 ];
 
 // Server and validation messages: fragments of composed messages, replaced wherever they appear.
@@ -95,6 +104,8 @@ const FRAGMENTS = [
   [/Ce fichier n'est pas une collecte Ultimate As-Built/g, 'This file is not an Ultimate As-Built collection'],
   [/Collecte au format (\S+), cette version lit le format (\S+) : mettre l'outil à jour ou recollecter/g, 'Collection in format $1, this version reads format $2: update the tool or collect again'],
   [/Template illisible : ce n'est pas un \.docx/g, 'Unreadable template: not a .docx'],
+  [/Téléchargement de la mise à jour impossible/g, 'The update could not be downloaded'],
+  [/Mise à jour automatique indisponible/g, 'Automatic update unavailable'],
   [/SVG illisible pour la rasterisation/g, 'Diagram could not be rendered to an image'],
   [/Le template ne contient pas le marqueur (\S+)/g, 'The template does not contain the $1 marker'],
   [/Le template ne contient pas le style de tableau « (.+?) »/g, 'The template does not contain the "$1" table style'],

@@ -15,4 +15,7 @@ export default {
   // Windows: our name and icon on bun.exe, which owns the window (Task Manager showed "Bun").
   scripts: { postBuild: 'desktop/postbuild.js' },
   runtime: { exitOnLastWindowClosed: true },
+  // Updates come from the latest stable GitHub release: the Windows CI job attaches the
+  // update files (update.json, checksum, full archive, patch) next to the installer.
+  release: { baseUrl: 'https://github.com/Exe64/ultimate-ntnx-asbuilt/releases/latest/download' },
 };

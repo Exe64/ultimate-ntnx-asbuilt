@@ -117,6 +117,14 @@
   td.ok { color: var(--ok); } td.ko { color: var(--ko); white-space: normal; }
   td.ok::before, td.ko::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%;
     background: currentColor; margin-right: 6px; vertical-align: 1px; }
+  /* New version: one band above the steps, accent border, quiet until there is something to say. */
+  .update { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 16px; padding: 12px 16px;
+    border: 1px solid var(--accent); border-radius: 12px; background: var(--accent-soft); box-shadow: var(--shadow); }
+  .update[hidden] { display: none; }
+  .update p { margin: 0; flex: 1 1 260px; }
+  .update strong { color: var(--accent-text); }
+  .update .warn { display: block; color: var(--muted); font-size: 12px; }
+  .update button { margin-top: 0; padding: 7px 14px; }
   .hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
   .hint.lead { margin: 0 0 12px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -144,6 +152,14 @@
     <a class="kofi" href="https://ko-fi.com/juliendumur" target="_blank" rel="noopener"><img src="../assets/kofi.png" alt="" width="22" height="18">Vous aimez l'appli ? Offrez-moi un Ko-fi</a>
   </div>
 </header>
+
+<div id="update" class="update" hidden>
+  <p><strong id="updateText"></strong>
+    <span id="updateWarn" class="warn" hidden>La mise à jour redémarre l'application : les saisies non exportées seront perdues.</span></p>
+  <button type="button" id="updateBtn" hidden>Mettre à jour</button>
+  <button type="button" id="updateConfirm" hidden>Redémarrer et mettre à jour</button>
+  <a id="updateLink" target="_blank" rel="noopener" hidden>Voir la release</a>
+</div>
 
 <section>
   <h2><span class="num">1</span>Prism Central</h2>

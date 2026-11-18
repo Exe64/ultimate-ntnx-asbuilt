@@ -5,13 +5,17 @@ import index from '../web/index.html';
 import template from '../assets/asbuilt-default.docx' with { type: 'file' };
 import { collectPcBundle, collectPes } from './bundle.js';
 import { isBundle } from '../web/exportFile.js';
+import { updateSource } from './update.js';
 
 // `page` : les routes de la page. Par défaut la page embarquée (import HTML de Bun) ; l'application
 // desktop passe la sienne, construite à part pour le navigateur.
+// `update` : d'où vient la nouvelle version. Par défaut la dernière release GitHub (exécutables
+// portables : un lien) ; l'application desktop passe son Updater (installation en un clic).
 // Jeton par lancement : la page le reçoit dans l'URL, toute autre origine l'ignore. Sans lui,
 // n'importe quel site ouvert dans le navigateur pourrait faire collecter ce serveur local.
-export function startServer(page = { '/': index }) {
+export function startServer(page = { '/': index }, update = updateSource()) {
   const token = crypto.randomUUID();
+  const denied = (req) => req.headers.get('x-token') !== token;
 
   // La collecte en cours, gardée en mémoire entre l'étape Prism Central et l'étape Prism Element.
   // Les identifiants, eux, ne sont jamais conservés.
@@ -19,7 +23,7 @@ export function startServer(page = { '/': index }) {
 
   const api = (handler) => ({
     POST: async (req) => {
-      if (req.headers.get('x-token') !== token) return Response.json({ error: 'Jeton invalide' }, { status: 403 });
+      if (denied(req)) return Response.json({ error: 'Jeton invalide' }, { status: 403 });
       try {
         const extra = await handler(await req.json());
         // Diagnostic : garde la collecte brute (sans identifiants) pour analyser un rendu.
@@ -50,6 +54,27 @@ export function startServer(page = { '/': index }) {
         if (!bundle) throw new Error('Collecter le Prism Central d\'abord');
         return { errors: await collectPes(bundle, Array.isArray(creds) ? creds : [], ignoreSSL) };
       }),
+      // Nouvelle version : vérifiée une fois au lancement ; la page lit la réponse.
+      '/api/update': {
+        GET: async (req) => {
+          if (denied(req)) return Response.json({ error: 'Jeton invalide' }, { status: 403 });
+          const info = await update.result;
+          return Response.json({ ...info, canApply: Boolean(info.available && info.canApply && update.apply) });
+        },
+      },
+      // Desktop : télécharge la mise à jour, répond, puis redémarre l'application sur la nouvelle version.
+      '/api/update/apply': {
+        POST: async (req) => {
+          if (denied(req)) return Response.json({ error: 'Jeton invalide' }, { status: 403 });
+          if (!update.apply) return Response.json({ error: 'Mise à jour automatique indisponible' }, { status: 409 });
+          try {
+            const restart = await update.apply();
+            // La réponse part avant le redémarrage : la page peut dire ce qui se passe.
+            if (typeof restart === 'function') setTimeout(restart, 500);
+            return Response.json({ ok: true });
+          } catch (err) { return Response.json({ error: err.message || String(err) }, { status: 502 }); }
+        },
+      },
     },
   });
 
