@@ -1,0 +1,120 @@
+---
+plan:
+  id: '13'
+  name: 13-mise-a-jour-application.md
+  link: https://github.com/Exe64/ultimate-ntnx-asbuilt/blob/main/doc/roadmap/13-mise-a-jour-application.md
+status: active
+date: 2026-11-18
+description: >
+  L'application desktop Windows signale une nouvelle release stable et se met à jour en un clic ;
+  les exécutables portables affichent la nouvelle version avec un lien vers la release.
+priority: medium
+complexity: L
+intent: null
+scope:
+  modules:
+    - server/update.js
+    - server/app.js
+    - desktop/main.js
+    - electrobun.config.ts
+    - web/index.html
+    - web/app.js
+    - web/i18n.js
+    - .github/workflows/ci.yml
+    - README.md
+    - tests/
+issue:
+  id: 13
+  url: https://github.com/Exe64/ultimate-ntnx-asbuilt/issues/13
+---
+
+# [⬆️] Plan #13 - Mise à jour depuis l'application
+
+## Objectif
+
+Quand une release stable `v*` est publiée, l'application desktop Windows le signale au démarrage et se met à jour en un clic (Updater Electrobun, fichiers joints à la release GitHub). Les exécutables portables affichent la nouvelle version avec un lien vers la release.
+
+## Périmètre
+
+### Inclus
+- Vérification au démarrage, silencieuse si à jour ou hors ligne (délai court ~5 s) ; `NO_UPDATE_CHECK=1` la coupe.
+- Bandeau bilingue en haut de page : bouton « Mettre à jour » (desktop) ou lien vers la release (portables).
+- Bouton grisé pendant une collecte ou une génération ; confirmation (saisies non exportées perdues) sinon.
+- CI : fichiers de mise à jour Electrobun (`artifacts/`) joints à la release, `*-update.json` en dernier.
+- Note de transition (v0.2.2 → réinstaller une fois), README.
+- Releases v0.3.0 (apporte l'updater) puis v0.3.1 (teste la mise à jour en un clic).
+
+### Hors scope
+- Signature de code.
+- Canal canary / pré-releases (exclues de `releases/latest`).
+- Mise à jour automatique des exécutables portables.
+- Witness (reliquat du plan #6).
+
+## Étapes
+
+### Lot 1 — code testable localement
+- [x] Étape 1 — Serveur : `server/update.js` (dernière release via l'API GitHub, délai 5 s, échec silencieux, comparaison de versions, source injectable pour le desktop) ; route `GET /api/update` ; tests avec un faux GitHub (M · standard → Sonnet)
+- [ ] Étape 2 — Desktop : `release.baseUrl` (`https://github.com/Exe64/ultimate-ntnx-asbuilt/releases/latest/download`) ; `Updater.checkForUpdate()` au démarrage dans `desktop/main.js`, branché sur `/api/update` ; `POST /api/update/apply` (téléchargement, application, redémarrage) (M · reasoning → Opus)
+- [x] Étape 3 — Page : bandeau bilingue, bouton ou lien selon la source, grisé pendant collecte/génération, confirmation ; libellés couverts par le test i18n (M · standard → Sonnet)
+
+### Lot 2 — CI, releases, validation Windows
+- [ ] Étape 4 — CI : job `desktop-windows` joint `artifacts/*` à la release sans renommage, `*-update.json` en dernier ; `Setup.zip` garde son nom ; smoke tests verts (S · standard → Sonnet)
+- [x] Étape 5 — README (section « Mises à jour », `NO_UPDATE_CHECK`) et note de transition dans les notes de release v0.3.0 (XS · standard → Sonnet)
+- [ ] Étape 6 — Releases : tag `v0.3.0`, puis `v0.3.1` (petite correction) (S · standard → Sonnet)
+- [ ] 🧪 Tests — Rédiger et exécuter la procédure de test, dont la mise à jour réelle v0.3.0 → v0.3.1 sur Windows 11
+- [ ] ✅ Validation — Vérifier les résultats des tests et clôturer
+
+## Décisions techniques
+
+| Décision | Choix retenu | Justification |
+|----------|-------------|---------------|
+| Déclencheur | Une vérification au démarrage | Pas d'appel réseau répété ; rien ne s'affiche si à jour |
+| Affichage | Bandeau dans la page | Bilingue, cohérent avec le thème, même composant desktop et portables |
+| Hors ligne | Échec silencieux, délai ~5 s, `NO_UPDATE_CHECK=1` | L'outil tourne chez des clients, parfois sans Internet |
+| Hébergement | GitHub Releases `releases/latest/download` | Supporté par Electrobun 2.0.6 pour le canal stable ; aucun hébergement à ajouter |
+| Sécurité de la collecte | Bouton grisé pendant collecte/génération, confirmation sinon | `applyUpdate()` redémarre l'application |
+| Transition v0.2.2 | Note « réinstaller une fois » dans la release v0.3.0 | La v0.2.2 n'embarque pas de `release.baseUrl` |
+| Validation | Deux releases stables successives | Les pré-releases ne passent pas par `releases/latest` |
+
+### Risques identifiés
+
+| Risque | Parade |
+|---|---|
+| Fenêtre de quelques minutes où la release existe sans `update.json` (job Ubuntu avant job Windows) | Échec silencieux ; la mise à jour sera vue au démarrage suivant |
+| Pas de patch différentiel pour v0.3.0 (aucune release précédente avec artefacts Electrobun) | Archive complète seule ; patchs à partir de v0.3.1 |
+| Updater non testable sous WSL | Build et smoke test en CI, puis Windows 11 à l'étape 🧪 |
+| API GitHub non authentifiée : 60 requêtes/h par IP | Une requête par démarrage |
+| `bun test` bloqué sans sortie au cadrage (2026-11-18) | Diagnostiquer avant l'étape 1 |
+
+## Tests
+
+> Procédure rédigée à l'étape 🧪 Tests (mode `autonomous`) ; résultats joués consignés ci-dessous.
+
+### Prérequis pour les tests
+
+```bash
+cd ~/dev/ultimate-ntnx-asbuilt
+npm ci
+```
+
+### Procédure de test
+
+```bash
+# À compléter à l'étape 🧪 Tests
+```
+
+**Résultats attendus :** à compléter.
+
+### Résultats joués et vérifiés
+
+| Date | Test | Attendu | Observé | Verdict |
+|------|------|---------|---------|---------|
+| 2026-11-18 | Auto-check exécuteur : suite complète (`npx bun test`), dont `tests/update.test.js` (versions, faux GitHub, hors ligne, délai, `NO_UPDATE_CHECK`, une seule vérification, routes `/api/update` et `/api/update/apply`) et couverture i18n du bandeau | 0 fail | 26 pass, 0 fail, 402 assertions, 5 fichiers | ✅ |
+
+## Journal de session
+
+### 2026-11-18
+- ✅ Fait : bilan du projet, cadrage (6 décisions), proposition validée, plan créé et rattaché à l'issue #13.
+- 📋 Prochain : diagnostiquer le blocage de `bun test`, puis étape 1.
+- 📝 Constat : `bun test` ne bloquait pas, `node_modules/` était absent. `npm ci` se traîne : réseau lent, jusqu'à 290 s pour un paquet.
+- 🔨 Code des étapes 1 à 5 écrit (mode one-shot, sans tests intermédiaires) : `server/update.js` et les routes `/api/update` et `/api/update/apply`, Updater dans `desktop/main.js`, `release.baseUrl`, bandeau, traductions, job CI et README. Vérification avant de cocher : suite `bun test`, puis un run CI `workflow_dispatch` pour l'étape 4.

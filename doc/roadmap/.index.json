@@ -1,0 +1,119 @@
+[
+  {
+    "id": "1",
+    "status": "done",
+    "priority": "high",
+    "complexity": "S",
+    "title": "[🚀] Plan #1 - CI de tests et release des exécutables sur tag",
+    "deps": [],
+    "path": "done/1-ci-release.md"
+  },
+  {
+    "id": "2",
+    "status": "done",
+    "priority": "high",
+    "complexity": "S",
+    "title": "[🧪] Plan #2 - Tests du serveur et du template, correctif du téléchargement",
+    "deps": [],
+    "path": "done/2-tests-serveur-template.md"
+  },
+  {
+    "id": "3",
+    "status": "done",
+    "priority": "high",
+    "complexity": "L",
+    "title": "[🔄] Plan #3 - Mise à jour du moteur",
+    "deps": [],
+    "path": "done/3-mise-a-jour-moteur.md"
+  },
+  {
+    "id": "4",
+    "status": "done",
+    "priority": "medium",
+    "complexity": "M",
+    "title": "[💾] Plan #4 - Export / import de la collecte",
+    "deps": [],
+    "path": "done/4-export-import-collecte.md"
+  },
+  {
+    "id": "5",
+    "status": "done",
+    "priority": "medium",
+    "complexity": "M",
+    "title": "[📶] Plan #5 - Robustesse de collecte et avancement par cluster",
+    "deps": [],
+    "path": "done/5-robustesse-avancement.md"
+  },
+  {
+    "id": "6",
+    "status": "done",
+    "priority": "medium",
+    "complexity": "L",
+    "title": "[📑] Plan #6 - Nouvelles sections du document",
+    "deps": [],
+    "path": "done/6-nouvelles-sections.md"
+  },
+  {
+    "id": "7",
+    "status": "done",
+    "priority": "low",
+    "complexity": "S",
+    "title": "[🌍] Plan #7 - Interface bilingue",
+    "deps": [],
+    "path": "done/7-interface-bilingue.md"
+  },
+  {
+    "id": "8",
+    "status": "done",
+    "priority": "medium",
+    "complexity": "M",
+    "title": "[🎨] Plan #8 - Template générique",
+    "deps": [],
+    "path": "done/8-template-generique.md"
+  },
+  {
+    "id": "9",
+    "status": "done",
+    "priority": "medium",
+    "complexity": "L",
+    "title": "[🪟] Plan #9 - Application desktop Windows (Electrobun)",
+    "deps": [],
+    "path": "done/9-app-desktop-windows.md"
+  },
+  {
+    "id": "10",
+    "status": "done",
+    "priority": "medium",
+    "complexity": "M",
+    "title": "[🧭] Plan #10 - Fiche du Prism Central",
+    "deps": [],
+    "path": "done/10-fiche-prism-central.md"
+  },
+  {
+    "id": "11",
+    "status": "done",
+    "priority": "medium",
+    "complexity": "M",
+    "title": "[🌗] Plan #11 - Thème sombre et habillage de l'interface",
+    "deps": [],
+    "path": "done/11-theme-sombre-habillage.md"
+  },
+  {
+    "id": "12",
+    "status": "done",
+    "priority": "low",
+    "complexity": "XS",
+    "title": "[©] Plan #12 - Copyright en pied de page",
+    "deps": [],
+    "path": "done/12-copyright-pied-de-page.md"
+  },
+  {
+    "id": "13",
+    "status": "active",
+    "priority": "medium",
+    "complexity": "L",
+    "title": "[⬆️] Plan #13 - Mise à jour depuis l'application",
+    "deps": [],
+    "path": "13-mise-a-jour-application.md"
+  }
+]

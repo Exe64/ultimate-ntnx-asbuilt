@@ -13,7 +13,8 @@ Backlog consolidé : plans nommés d'après leur issue GitHub (voir `doc/roadmap
 
 ## À faire
 
-Aucun plan en cours.
+- **[Issue: #13] `#13` — Mise à jour depuis l'application** 🟢 medium · L — L'application Windows signale une nouvelle release stable et se met à jour en un clic ; les exécutables portables affichent la nouvelle version avec un lien vers la release.
+  [`13-mise-a-jour-application.md`](13-mise-a-jour-application.md)
 
 ---
 
