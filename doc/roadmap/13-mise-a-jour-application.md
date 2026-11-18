@@ -75,6 +75,7 @@ Quand une release stable `v*` est publiée, l'application desktop Windows le sig
 | Sécurité de la collecte | Bouton grisé pendant collecte/génération, confirmation sinon | `applyUpdate()` redémarre l'application |
 | Transition v0.2.2 | Note « réinstaller une fois » dans la release v0.3.0 | La v0.2.2 n'embarque pas de `release.baseUrl` |
 | Validation | Deux releases stables successives | Les pré-releases ne passent pas par `releases/latest` |
+| Smart App Control | Pas de signature de code ; limite documentée dans le README | Choix de l'utilisateur (2026-11-18) : SAC bloque tout binaire non signé, sans contournement |
 
 ### Risques identifiés
 
@@ -118,3 +119,9 @@ npm ci
 - 📋 Prochain : diagnostiquer le blocage de `bun test`, puis étape 1.
 - 📝 Constat : `bun test` ne bloquait pas, `node_modules/` était absent. `npm ci` se traîne : réseau lent, jusqu'à 290 s pour un paquet.
 - 🔨 Code des étapes 1 à 5 écrit (mode one-shot, sans tests intermédiaires) : `server/update.js` et les routes `/api/update` et `/api/update/apply`, Updater dans `desktop/main.js`, `release.baseUrl`, bandeau, traductions, job CI et README. Vérification avant de cocher : suite `bun test`, puis un run CI `workflow_dispatch` pour l'étape 4.
+- ✅ Suite 26 pass ; version 0.3.0 ; 4 commits poussés ; tag `v0.3.0` posé sur accord de l'utilisateur (run 44338759482).
+- ❌ Job `desktop-windows` en échec à « List update files » : la chaîne Electrobun de la CI ne produit pas de `*-checksum.json` (doc de la branche main en avance). Produit : `stable-win-x64-update.json`, `stable-win-x64-update-v2.json`, `stable-win-x64-UltimateAs-BuiltGenerator.tar.zst`. Correctif `fix(ci)` : seuls le manifeste et l'archive sont exigés, les deux manifestes partent en dernier.
+- 🔁 Tag non déplacé : reconstruction via `workflow_dispatch` sur `main` (run 44339583955, code identique au tag hors `ci.yml`), artefacts ajoutés à la main à la release v0.3.0, manifestes en dernier. Note de transition FR/EN ajoutée en tête des notes de la release.
+- 🔁 Téléchargement local coupé (réseau). Ajout de l'entrée `release_tag` au `workflow_dispatch` (refusée si `package.json` ne porte pas cette version) ; run 44346748013 vert : release v0.3.0 complète (Setup.zip, exe Windows, `.tar.zst`, `update.json`, `update-v2.json`, 4 exe Linux/macOS).
+- 🚧 Bloquant : sur Windows 11, Smart App Control (SAC) bloque l'installation de v0.3.0. Le plan #9 n'avait vu que SmartScreen, qui se contourne ; SAC ne se contourne pas pour un binaire non signé. Le même blocage toucherait chaque version installée par l'Updater. Décision attendue : signature de code (nouveau plan) ou SAC désactivé sur le poste de test.
+- 💡 Décision (utilisateur) : signature de code abandonnée, SignPath Foundation compris. Poste de test : SAC désactivé pour valider v0.3.0 → v0.3.1. Limite assumée et documentée dans le README : avec SAC activé, ni l'application ni l'exe portable ne se lancent.
