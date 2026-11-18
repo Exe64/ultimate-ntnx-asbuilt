@@ -59,6 +59,10 @@ All builds are on the [**Releases**](https://github.com/Exe64/ultimate-ntnx-asbu
 > [!NOTE]
 > Binaries are not signed.
 > **Windows**: SmartScreen warns on first launch → *More info* → *Run anyway*.
+> **Windows 11 Smart App Control** blocks unsigned apps with no way around it: with it on, neither
+> the app nor the portable exe will start. Turning it off: *Windows Security* → *App & browser
+> control* → *Smart App Control settings* → *Off* (on some Windows builds it cannot be turned back
+> on without resetting Windows).
 > **macOS**: right-click → *Open*, or `xattr -d com.apple.quarantine ultimate-asbuilt-macos-arm64`.
 
 ## Updates
