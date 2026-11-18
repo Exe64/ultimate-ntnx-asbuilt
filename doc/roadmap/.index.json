@@ -115,5 +115,32 @@
     "title": "[⬆️] Plan #13 - Mise à jour depuis l'application",
     "deps": [],
     "path": "done/13-mise-a-jour-application.md"
+  },
+  {
+    "id": "14",
+    "status": "active",
+    "priority": "medium",
+    "complexity": "XS",
+    "title": "[⚖️] Plan #14 - Pied de page : mention de licence",
+    "deps": [],
+    "path": "14-pied-de-page-licence.md"
+  },
+  {
+    "id": "15",
+    "status": "active",
+    "priority": "medium",
+    "complexity": "M",
+    "title": "[💾] Plan #15 - Sauvegarde automatique avant une mise à jour",
+    "deps": [],
+    "path": "15-sauvegarde-avant-mise-a-jour.md"
+  },
+  {
+    "id": "16",
+    "status": "active",
+    "priority": "medium",
+    "complexity": "L",
+    "title": "[🔀] Plan #16 - Comparaison de deux collectes",
+    "deps": [],
+    "path": "16-comparaison-collectes.md"
   }
 ]

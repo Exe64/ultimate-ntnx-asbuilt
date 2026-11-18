@@ -13,7 +13,12 @@ Backlog consolidé : plans nommés d'après leur issue GitHub (voir `doc/roadmap
 
 ## À faire
 
-Aucun plan en cours.
+- **[Issue: #14] `#14` — Pied de page : mention de licence** 🟢 medium · XS — La licence GPL-3.0, avec un lien, à la place de « Tous droits réservés ».
+  [`14-pied-de-page-licence.md`](14-pied-de-page-licence.md)
+- **[Issue: #15] `#15` — Sauvegarde automatique avant une mise à jour** 🟢 medium · M — La collecte et les saisies survivent au redémarrage d'une mise à jour.
+  [`15-sauvegarde-avant-mise-a-jour.md`](15-sauvegarde-avant-mise-a-jour.md)
+- **[Issue: #16] `#16` — Comparaison de deux collectes** 🟢 medium · L — Rapport d'écarts .docx entre deux collectes exportées.
+  [`16-comparaison-collectes.md`](16-comparaison-collectes.md)
 
 ---
 
