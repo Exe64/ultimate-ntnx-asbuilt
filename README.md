@@ -61,6 +61,23 @@ All builds are on the [**Releases**](https://github.com/Exe64/ultimate-ntnx-asbu
 > **Windows**: SmartScreen warns on first launch → *More info* → *Run anyway*.
 > **macOS**: right-click → *Open*, or `xattr -d com.apple.quarantine ultimate-asbuilt-macos-arm64`.
 
+## Updates
+
+At launch, the tool checks once whether a newer stable release is out, and says so in a band at
+the top of the page:
+
+- **Windows app**: *Update* downloads the new version, then restarts on it. It is greyed out while
+  a collection or a generation is running; with a collection on screen, a second click confirms,
+  since inputs not exported are lost on restart.
+- **Portable executables**: a link to the release, to download it by hand.
+
+Offline, or when GitHub does not answer within 5 s, nothing is shown. `NO_UPDATE_CHECK=1` turns
+the check off (see [Advanced settings](#advanced-settings)).
+
+> [!IMPORTANT]
+> The Windows app updates itself from **v0.3.0** on. Coming from v0.2.2 or older, install v0.3.0
+> once by hand with its `Setup.zip`.
+
 ## Usage
 
 1. **Launch** the executable: the interface opens in your browser (or in its own window for the Windows app).
@@ -93,6 +110,7 @@ Available placeholders: `{{client}}`, `{{projet}}`, `{{prism_central}}`, `{{clus
 |---|---|
 | `ASBUILT_TIMEOUT_S=180` | Per-call API timeout (default 60 s), for a slow or remote Prism |
 | `DUMP=collect.json` | Saves the raw collected data, without credentials, for troubleshooting |
+| `NO_UPDATE_CHECK=1` | No new-version check at launch: nothing is sent to GitHub |
 
 The cabling diagram relies on what hosts see of their switches (LLDP/CDP). Without that data, it
 falls back to the number of switches entered and says so in its caption.
@@ -128,7 +146,9 @@ git tag v0.2.0 && git push origin v0.2.0
 
 CI builds the five executables and attaches them to the release; a Windows runner then adds the
 app installer and replaces the Windows exe with one carrying the tool's icon (`--windows-icon`
-does not work when cross-compiling).
+does not work when cross-compiling). It also attaches the updater's files (`*-update.json`,
+`*-checksum.json`, `*.tar.zst`, patches) under their built names: the app reads them from
+`releases/latest/download`, so only stable (non pre-release) tags reach installed apps.
 
 ## Support
 
