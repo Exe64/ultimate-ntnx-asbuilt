@@ -124,6 +124,7 @@
   .update p { margin: 0; flex: 1 1 260px; }
   .update strong { color: var(--accent-text); }
   .update .warn { display: block; color: var(--muted); font-size: 12px; }
+  .update [hidden] { display: none; }   /* display: block above would otherwise win over hidden */
   .update button { margin-top: 0; padding: 7px 14px; }
   .hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
   .hint.lead { margin: 0 0 12px; }
