@@ -47,9 +47,9 @@ Une mise à jour redémarre l'application. Aujourd'hui, les saisies non exporté
 
 ## Étapes
 
-- [ ] Étape 1 — Serveur : `server/resume.js` (écrit, relit une fois, supprime) ; `POST /api/update/apply` accepte `{ resume }` et l'écrit avant le redémarrage ; `GET /api/resume` (jeton) rend la sauvegarde une fois ; tests (M · standard → Sonnet)
-- [ ] Étape 2 — Desktop : fichier de reprise dans le dossier de l'application (`Updater.appDataFolder()`), à défaut `%TEMP%` (S · standard → Sonnet)
-- [ ] Étape 3 — Page : export joint au clic, reprise au lancement (même rendu qu'un import), avertissement et second clic retirés, libellés traduits (S · standard → Sonnet)
+- [x] Étape 1 — Serveur : `server/resume.js` (écrit, relit une fois, supprime) ; `POST /api/update/apply` accepte `{ resume }` et l'écrit avant le redémarrage ; `GET /api/resume` (jeton) rend la sauvegarde une fois ; tests (M · standard → Sonnet)
+- [x] Étape 2 — Desktop : fichier de reprise dans le dossier de l'application (`Updater.appDataFolder()`), à défaut `%TEMP%` (S · standard → Sonnet)
+- [x] Étape 3 — Page : export joint au clic, reprise au lancement (même rendu qu'un import), avertissement et second clic retirés, libellés traduits (S · standard → Sonnet)
 - [ ] 🧪 Tests — Rédiger et exécuter la procédure de test
 - [ ] ✅ Validation — Vérifier les résultats des tests et clôturer
 
@@ -75,18 +75,38 @@ cd ~/dev/ultimate-ntnx-asbuilt
 ### Procédure de test
 
 ```bash
+# T1 — Suite automatisée : tests/resume.test.js (sauvegarde, reprise unique, refus, échec, jeton) et i18n
 npx bun test
+# T2 — Builds de la page et de l'application desktop
+npx bun build web/index.html --target=browser --outdir /tmp/webchk
+npx bun build desktop/main.js --target=bun --external electrobun --outdir /tmp/chk
 ```
 
-**Résultats attendus :** à compléter à l'étape 🧪 Tests.
+```powershell
+# T3 — Windows 11, à la première release après v0.3.2 (v0.3.2 installée) : collecter ou importer
+#      une collecte, saisir un client, cliquer « Mettre à jour ». Après le redémarrage :
+#      la collecte et le client sont revenus, message « Collecte de … reprise après la mise à jour ».
+Get-ChildItem $env:LOCALAPPDATA\fr.juliendumur.ultimate-asbuilt\stable -Filter resume-after-update.json   # aucun fichier
+```
+
+**Résultats attendus :**
+- T1 : 0 fail. T2 : les deux builds passent.
+- T3 : collecte et saisies restaurées après le redémarrage ; plus de fichier de reprise ensuite.
 
 ### Résultats joués et vérifiés
 
 | Date | Test | Attendu | Observé | Verdict |
 |------|------|---------|---------|---------|
+| 2026-11-18 | T1 — `npx bun test` | 0 fail | 31 pass, 0 fail, 424 assertions, 6 fichiers (dont `tests/resume.test.js` : 5 tests) | ✅ |
+| 2026-11-18 | T2 — builds page et desktop | OK | `web build ok`, `desktop build ok` | ✅ |
+| 2026-11-18 | T3 — Windows 11, mise à jour réelle | Collecte restaurée | En attente : la v0.3.2 installée n'a pas ce code, il faut une release suivante | ⏳ |
 
 ## Journal de session
 
 ### 2026-11-18
 - ✅ Issue #15 et plan créés (cadrage par l'exécutant, sur consigne de l'utilisateur).
 - 📝 Constat au cadrage : la langue et le thème, « mémorisés » dans `localStorage` (#7, #11), ne survivent pas à un relancement de l'application ou de l'exe : le port, donc l'origine, change à chaque lancement. Hors périmètre ici, à traiter à part.
+- 🔨 `server/resume.js` (lu et supprimé au démarrage du serveur, rendu une fois, retiré si la mise à jour échoue) ; `POST /api/update/apply` accepte `{ resume }`, refuse tout autre format que l'export ; `GET /api/resume` (jeton) ; `desktop/main.js` : fichier dans `Updater.appDataFolder()`, à défaut `%TEMP%`.
+- 🔨 Page : l'export part avec le clic « Mettre à jour », reprise au lancement par le même chemin que l'import (`restore()`), avertissement et second clic retirés, remplacés par « la collecte en cours est conservée » ; libellés traduits et testés ; README à jour.
+- 📝 Vu en passant : l'infobulle du bouton grisé (« Disponible une fois la collecte… ») n'est pas traduite, `translateNode` ne traite pas l'attribut `title` (#13).
+- ⏳ Reste : T3 sur Windows à la prochaine release, puis ✅ Validation et clôture.
