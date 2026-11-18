@@ -1,6 +1,6 @@
 // Application desktop : le même serveur que l'exécutable, affiché dans une fenêtre native.
-import { readdirSync, appendFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readdirSync, appendFileSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { BrowserWindow, Updater } from 'electrobun/main';
 import { startServer } from '../server/app.js';
@@ -43,6 +43,14 @@ async function apply() {
   if (!info.updateReady) throw new Error(`Téléchargement de la mise à jour impossible${info.error ? ` : ${info.error}` : ''}`);
   return () => Updater.applyUpdate();
 }
+
+// Electrobun's Updater reads `../Resources/version.json` against the working directory, from the
+// folder that holds bun.exe, and keeps what it read (empty when missing) for the whole session.
+// Read it from there first, whatever folder the app was started in.
+const binDir = dirname(process.execPath);
+log(`version.json ${existsSync(join(binDir, '..', 'Resources', 'version.json')) ? 'found' : 'missing'} from ${binDir}`);
+process.chdir(binDir);
+await Updater.getLocalInfo();
 
 // Bun resolves bundled assets against the working directory, and a Start-menu launch starts in
 // System32: move next to the bundle first.

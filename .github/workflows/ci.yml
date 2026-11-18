@@ -84,6 +84,9 @@ jobs:
           $url = Select-String -Path out.txt -Pattern 'http://127\.0\.0\.1:\d+/' | ForEach-Object { $_.Matches[0].Value } | Select-Object -First 1
           try {
             if (-not $url) { throw 'server URL not found in app output' }
+            # The Updater must read version.json even when started from System32 (#13), or the
+            # update check fails on an empty channel.
+            if (-not (Select-String -Path out.txt -Pattern 'local \S+ stable ' -Quiet)) { throw 'Updater did not read version.json (stable channel)' }
             $r = Invoke-WebRequest $url -UseBasicParsing
             if ($r.StatusCode -ne 200) { throw "page returned $($r.StatusCode)" }
             # The page is useless without its script: it must be served, as JavaScript, and whole.
