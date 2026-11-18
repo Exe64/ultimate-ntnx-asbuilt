@@ -30,6 +30,7 @@ test('page : textes variables et messages du serveur en anglais', () => {
   expect(toEnglish('Collecte de pc.lab reprise après la mise à jour : 2 cluster(s).')).toBe('Collection of pc.lab restored after the update: 2 cluster(s).');
   expect(toEnglish('Sauvegarde de la collecte invalide')).toBe('Collection backup invalid');
   expect(toEnglish('Version 0.3.3 disponible.')).toBe('Version 0.3.3 available.');
+  expect(toEnglish("Rapport d'écarts généré : 12 écart(s).")).toBe('Change report generated: 12 change(s).');
   // Ce qui n'est pas du texte de la page reste tel quel : noms, adresses, clés.
   for (const s of ['NTNX-LAB-1', '192.168.84.201', 'v4_snmp', '']) expect(toEnglish(s)).toBe(s);
 });

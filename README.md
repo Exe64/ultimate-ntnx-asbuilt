@@ -34,6 +34,7 @@ illustrated with diagrams drawn from the actual configuration.
 - **Multi-cluster**: every cluster registered on Prism Central is detected and documented.
 - **Automatic diagrams**: virtual network, physical cabling (from LLDP/CDP) and more, drawn from the collected data.
 - **Your branding**: layout driven by an editable Word template.
+- **Change report**: compare two exported collections and get what changed, as a Word document.
 - **Bilingual**: interface and document in English or French.
 - **Secure by design**: credentials are never stored, the server listens locally only.
 
@@ -91,6 +92,20 @@ the check off (see [Advanced settings](#advanced-settings)).
 3. **Collect**: for each cluster, enter its Prism Element credentials, then *Collect*.
    A cluster left without a password is documented from Prism Central alone.
 4. **Complete** what Prism cannot know (customer, site, switches), then *Generate .docx*.
+
+## Compare two collections
+
+Export a collection at delivery, export another one months later, and the tool tells what changed.
+In step 1, *Compare two collections* takes the two exported files (before, after) and generates a
+`.docx` change report in the Word template:
+
+- a summary: number of rows added, removed and values changed, per section and per cluster;
+- one table per changed section: item, field, before, after;
+- clusters added or removed, and sections collected on one side only.
+
+Prism is not queried: the comparison works from the two files alone. Diagrams, the presentation
+text and the annexes are not compared; values that move on their own (used capacity, for
+instance) show up like any other change.
 
 ## Security
 

@@ -45,6 +45,14 @@ export const EN = {
   'Télécharger le template par défaut': 'Download the default template',
   'pour le retoucher dans Word.': 'to edit it in Word.',
   'Exporter la collecte': 'Export the collection',
+  'Comparer deux collectes': 'Compare two collections',
+  'Collecte de référence (avant)': 'Reference collection (before)',
+  'Collecte récente (après)': 'Recent collection (after)',
+  "Rapport d'écarts .docx entre deux collectes exportées : lignes ajoutées, supprimées et valeurs modifiées, section par section. Rien n'est demandé à Prism.":
+    'A .docx change report between two exported collections: rows added, removed and values changed, section by section. Prism is not queried.',
+  "Générer le rapport d'écarts": 'Generate the change report',
+  'Choisir les deux collectes à comparer.': 'Choose the two collections to compare.',
+  'Comparaison des collectes…': 'Comparing the collections…',
   'Générer le .docx': 'Generate the .docx',
   'IP ou FQDN': 'IP or FQDN',
   // app.js
@@ -85,6 +93,7 @@ const PATTERNS = [
   [/^· sans réponse : (.*)$/, '· no response: $1'],
   [/^non collecté \((.*)\)$/, 'not collected ($1)'],
   [/^Version (\S+) disponible\.$/, 'Version $1 available.'],
+  [/^Rapport d'écarts généré : (\d+) écart\(s\)\.$/, 'Change report generated: $1 change(s).'],
   [/^Collecte de (.+) reprise après la mise à jour : (\d+) cluster\(s\)\.$/, 'Collection of $1 restored after the update: $2 cluster(s).'],
 ];
 

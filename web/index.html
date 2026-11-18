@@ -180,6 +180,16 @@
     <p class="hint">Recharge la collecte et les saisies d'un fichier exporté à l'étape 3 : le document se régénère sans
       réinterroger Prism. Le fichier ne contient aucun identifiant.</p>
   </fieldset>
+  <fieldset>
+    <legend>Comparer deux collectes</legend>
+    <div class="grid">
+      <label>Collecte de référence (avant)<input type="file" id="cmpBefore" accept=".json,application/json"></label>
+      <label>Collecte récente (après)<input type="file" id="cmpAfter" accept=".json,application/json"></label>
+    </div>
+    <p class="hint">Rapport d'écarts .docx entre deux collectes exportées : lignes ajoutées, supprimées et valeurs
+      modifiées, section par section. Rien n'est demandé à Prism.</p>
+    <button type="button" id="cmpBtn" class="ghost">Générer le rapport d'écarts</button>
+  </fieldset>
 </section>
 
 <section id="pe" hidden>

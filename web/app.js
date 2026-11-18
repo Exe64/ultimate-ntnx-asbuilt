@@ -7,6 +7,7 @@ import { withDiagrams, renderDiagram } from './diagrams';
 import { cleanModel } from './clean';
 import { checkTemplate } from './templateCheck';
 import { buildExport, parseExport, exportFileName } from './exportFile';
+import { compareCollections, compareFileName } from '../engine/asbuilt/compare';
 import { version } from '../package.json';
 import { startI18n, setLang, browserLang } from './i18n';
 
@@ -247,6 +248,33 @@ async function resumeAfterUpdate() {
     status(`Collecte de ${bundle.pc.host} reprise après la mise à jour : ${bundle.clusters.length} cluster(s).`);
   } catch (err) { status(err.message || String(err), true); }
 }
+
+// Change report between two exported collections: no Prism, no collection on screen needed.
+const readCollection = async (input) => {
+  const text = await input.files[0].text();
+  const { bundle: b, inputs } = parseExport(text);
+  const { exportedAt, appVersion } = JSON.parse(text);
+  return { bundle: b, inputs, exportedAt, appVersion };
+};
+$('cmpBtn').addEventListener('click', async () => {
+  if (!$('cmpBefore').files[0] || !$('cmpAfter').files[0]) return status('Choisir les deux collectes à comparer.', true);
+  $('cmpBtn').disabled = true;
+  working++; refreshUpdate();
+  status('Comparaison des collectes…');
+  try {
+    const before = await readCollection($('cmpBefore')), after = await readCollection($('cmpAfter'));
+    const { model, total } = compareCollections(before, after, { lang });
+    const template = await (await fetch('/template.docx')).arrayBuffer();
+    const docx = await import('docx');
+    const blob = await generateAsBuiltDocx(docx, model, {
+      lang, template, images: {}, appVersion: version, branding: { customer: after.inputs?.values?.client || null },
+    });
+    download(blob, compareFileName(model));
+    status(`Rapport d'écarts généré : ${total} écart(s).`);
+  } catch (err) { status(err.message || String(err), true); }
+  working--; refreshUpdate();
+  $('cmpBtn').disabled = false;
+});
 
 $('generate').addEventListener('submit', (ev) => {
   ev.preventDefault();
