@@ -129,6 +129,7 @@ Get-Content $env:TEMP\ultimate-asbuilt-update.log
 
 | Date | Test | Attendu | Observé | Verdict |
 |------|------|---------|---------|---------|
+| 2026-11-18 | Windows 11 : première mise à jour entre deux releases réelles, v0.3.2 → v0.3.3 | Bandeau, mise à jour, redémarrage en v0.3.3 | `[update-available] 2q8v7vcm → 1vk6z0k7`, `[download-complete]` en 11 s, `[launching-new-version]`, relance : `local 0.3.3 stable 1vk6z0k7ljxkn`, `[complete] Update to 0.3.3 completed successfully`, `[no-update]` | ✅ |
 | 2026-11-18 | Windows 11 (SAC désactivé) : installation manuelle de v0.3.0 depuis `Setup.zip` | L'application démarre, pied de page v0.3.0, pas de bandeau (dernière release) | Démarre en 0.3.0 (retour utilisateur) | ✅ |
 | 2026-11-18 | Windows 11 : v0.3.0 relancée, dépôt public | Bandeau « Version 0.3.1 disponible. » | Pas de bandeau : `version.json` non lu (cwd), voir journal | ❌ |
 | 2026-11-18 | CI run 44397879270, smoke test lancé depuis `%SystemRoot%` (correctif `version.json`) | `local 0.3.1 stable …` puis `[update-available]` | `version.json found`, `local 0.3.1 stable 2gyc9orxpzgsr …/releases/latest/download`, `[update-available] 2gyc9orx → gnenf705`, `updateAvailable: true` | ✅ |
@@ -166,3 +167,4 @@ Get-Content $env:TEMP\ultimate-asbuilt-update.log
 - 🚀 v0.3.2 (correctifs `version.json`, avertissement, journal) ; README : mise à jour automatique à partir de v0.3.2, journal cité ; note FR/EN « installer une fois à la main » en tête des notes de release v0.3.2.
 - ✅ Validation : v0.3.2 installée à la main, `[no-update]` au lancement. Plan clôturé le 2026-11-18.
 - 📝 Reste hors plan : aucun patch différentiel produit par Hutch pour v0.3.1 et v0.3.2 (archive complète ~48 Mo à chaque mise à jour) ; le cycle complet entre deux releases réelles (v0.3.2 → suivante) sera observé à la prochaine release. Avertissements CI : actions en Node 20, migration `ubuntu-latest` vers Ubuntu 26.
+- ✅ Après clôture : première mise à jour entre deux releases réelles (v0.3.2 → v0.3.3) validée sur Windows 11. Le point ouvert « cycle complet entre deux releases » est levé. Toujours pas de patch différentiel (archive complète).
