@@ -71,8 +71,9 @@ At launch, the tool checks once whether a newer stable release is out, and says 
 the top of the page:
 
 - **Windows app**: *Update* downloads the new version, then restarts on it. It is greyed out while
-  a collection or a generation is running; with a collection on screen, a second click confirms,
-  since inputs not exported are lost on restart.
+  a collection or a generation is running. The collection on screen and its inputs are saved
+  before the restart and come back at the next launch (never any password); the saved file is
+  deleted as soon as it is read.
 - **Portable executables**: a link to the release, to download it by hand.
 
 Offline, or when GitHub does not answer within 5 s, nothing is shown. `NO_UPDATE_CHECK=1` turns

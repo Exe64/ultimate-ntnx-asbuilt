@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { BrowserWindow, Updater } from 'electrobun/main';
 import { startServer } from '../server/app.js';
 import { updateSource, withTimeout, NONE, REPO } from '../server/update.js';
+import { resumeStore } from '../server/resume.js';
 
 // The update check is silent in the page: its trace goes to a log, for when no banner shows up.
 // %TEMP%\ultimate-asbuilt-update.log, and the console with ELECTROBUN_CONSOLE=1.
@@ -52,6 +53,11 @@ log(`version.json ${existsSync(join(binDir, '..', 'Resources', 'version.json')) 
 process.chdir(binDir);
 await Updater.getLocalInfo();
 
+// Work in progress kept across an update's restart: in the app's own data folder, %TEMP% otherwise.
+let dataDir = tmpdir();
+try { dataDir = (await Updater.appDataFolder()) || dataDir; } catch { /* dev build: %TEMP% */ }
+const resume = resumeStore(join(dataDir, 'resume-after-update.json'));
+
 // Bun resolves bundled assets against the working directory, and a Start-menu launch starts in
 // System32: move next to the bundle first.
 process.chdir(import.meta.dir);
@@ -61,6 +67,6 @@ process.chdir(import.meta.dir);
 const web = join(import.meta.dir, '..', 'web');
 const page = Object.fromEntries(readdirSync(web).map(f => [f === 'index.html' ? '/' : `/${f}`, () => new Response(Bun.file(join(web, f)))]));
 
-const { url } = startServer(page, updateSource({ check, apply }));
+const { url } = startServer(page, updateSource({ check, apply }), resume);
 console.log(`Ultimate As-Built — ${url}`);   // visible avec ELECTROBUN_CONSOLE=1
 new BrowserWindow({ title: 'Ultimate As-Built Generator', url, frame: { width: 1200, height: 900 } });

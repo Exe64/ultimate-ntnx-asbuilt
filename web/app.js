@@ -221,18 +221,32 @@ $('importFile').addEventListener('change', async (ev) => {
   if (!file) return;
   status('Lecture de la collecte…');
   try {
-    const { bundle: imported, inputs } = parseExport(await file.text());
-    ({ bundle } = await post('/api/import', { bundle: imported, ignoreSSL: $('connect').elements.ignoreSSL.checked }));
-    $('doc').hidden = true;
-    renderPeStep();
-    renderPeStates();
-    renderDocumentStep();
-    writeInputs($('generate'), inputs);
-    applyLang($('generate').elements.lang.value);   // the collection's document language wins
+    await restore(parseExport(await file.text()));
     status(`Collecte de ${bundle.pc.host} reprise : ${bundle.clusters.length} cluster(s).`);
   } catch (err) { status(err.message || String(err), true); }
   ev.target.value = '';   // le même fichier doit pouvoir être rechargé
 });
+
+// A collection and its inputs back on screen: an imported file, or the work saved before an update.
+async function restore({ bundle: imported, inputs }) {
+  ({ bundle } = await post('/api/import', { bundle: imported, ignoreSSL: $('connect').elements.ignoreSSL.checked }));
+  $('doc').hidden = true;
+  renderPeStep();
+  renderPeStates();
+  renderDocumentStep();
+  writeInputs($('generate'), inputs);
+  applyLang($('generate').elements.lang.value);   // the collection's document language wins
+}
+
+// After an update's restart, the server hands back what was on screen, once.
+async function resumeAfterUpdate() {
+  try {
+    const res = await fetch('/api/resume', { headers: { 'x-token': token } });
+    if (res.status !== 200) return;
+    await restore(parseExport(await res.text()));
+    status(`Collecte de ${bundle.pc.host} reprise après la mise à jour : ${bundle.clusters.length} cluster(s).`);
+  } catch (err) { status(err.message || String(err), true); }
+}
 
 $('generate').addEventListener('submit', (ev) => {
   ev.preventDefault();
@@ -292,7 +306,7 @@ for (const input of document.querySelectorAll('input[name=theme]')) {
 // portable executables: a link to the release. Offline or up to date: the band stays hidden.
 let update = null, applying = false;
 function refreshUpdate() {
-  $('updateBtn').disabled = $('updateConfirm').disabled = applying || working > 0;
+  $('updateBtn').disabled = applying || working > 0;
   $('updateBtn').title = working > 0 ? 'Disponible une fois la collecte ou la génération terminée' : '';
 }
 async function showUpdate() {
@@ -302,7 +316,7 @@ async function showUpdate() {
   } catch { /* offline: nothing to say */ }
   if (!update?.available) return;
   $('updateText').textContent = `Version ${update.version} disponible.`;
-  $('updateBtn').hidden = !update.canApply;
+  $('updateBtn').hidden = $('updateHint').hidden = !update.canApply;
   Object.assign($('updateLink'), { hidden: update.canApply || !update.url, href: update.url || '' });
   $('update').hidden = false;
   refreshUpdate();
@@ -311,23 +325,19 @@ async function applyUpdate() {
   applying = true; refreshUpdate();
   status('Téléchargement de la mise à jour…');
   try {
-    await post('/api/update/apply', {});
+    // What is on screen survives the restart: saved by the server, given back at the next launch.
+    await post('/api/update/apply', bundle ? { resume: buildExport(bundle, readInputs($('generate')), version) } : {});
     status('Redémarrage sur la nouvelle version…');
   } catch (err) {
     applying = false; refreshUpdate();
     status(err.message || String(err), true);
   }
 }
-// A collection on screen may hold inputs not exported yet: say so, and ask a second click.
-$('updateBtn').addEventListener('click', () => {
-  if (!bundle) return applyUpdate();
-  $('updateBtn').hidden = true;
-  $('updateWarn').hidden = $('updateConfirm').hidden = false;
-});
-$('updateConfirm').addEventListener('click', applyUpdate);
+$('updateBtn').addEventListener('click', applyUpdate);
 
 $('pageLang').addEventListener('change', (ev) => applyLang(ev.target.value));
 $('generate').elements.lang.addEventListener('change', (ev) => applyLang(ev.target.value));
 startI18n(lang);
 applyLang(lang);
 showUpdate();
+resumeAfterUpdate();

@@ -11,9 +11,10 @@ import { updateSource } from './update.js';
 // desktop passe la sienne, construite à part pour le navigateur.
 // `update` : d'où vient la nouvelle version. Par défaut la dernière release GitHub (exécutables
 // portables : un lien) ; l'application desktop passe son Updater (installation en un clic).
+// `resume` : où garder le travail en cours le temps du redémarrage d'une mise à jour (desktop).
 // Jeton par lancement : la page le reçoit dans l'URL, toute autre origine l'ignore. Sans lui,
 // n'importe quel site ouvert dans le navigateur pourrait faire collecter ce serveur local.
-export function startServer(page = { '/': index }, update = updateSource()) {
+export function startServer(page = { '/': index }, update = updateSource(), resume = null) {
   const token = crypto.randomUUID();
   const denied = (req) => req.headers.get('x-token') !== token;
 
@@ -68,11 +69,28 @@ export function startServer(page = { '/': index }, update = updateSource()) {
           if (denied(req)) return Response.json({ error: 'Jeton invalide' }, { status: 403 });
           if (!update.apply) return Response.json({ error: 'Mise à jour automatique indisponible' }, { status: 409 });
           try {
+            // Le travail en cours est écrit avant tout : s'il ne peut pas l'être, pas de mise à jour.
+            const body = await req.json().catch(() => ({}));
+            if (body?.resume) {
+              if (!resume) throw new Error('Sauvegarde de la collecte indisponible');
+              resume.save(body.resume);
+            }
             const restart = await update.apply();
             // La réponse part avant le redémarrage : la page peut dire ce qui se passe.
             if (typeof restart === 'function') setTimeout(restart, 500);
             return Response.json({ ok: true });
-          } catch (err) { return Response.json({ error: err.message || String(err) }, { status: 502 }); }
+          } catch (err) {
+            resume?.discard();
+            return Response.json({ error: err.message || String(err) }, { status: 502 });
+          }
+        },
+      },
+      // Après le redémarrage : la collecte sauvegardée, une seule fois.
+      '/api/resume': {
+        GET: (req) => {
+          if (denied(req)) return Response.json({ error: 'Jeton invalide' }, { status: 403 });
+          const file = resume?.take();
+          return file ? Response.json(file) : new Response(null, { status: 204 });
         },
       },
     },

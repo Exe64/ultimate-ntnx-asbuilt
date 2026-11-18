@@ -67,10 +67,9 @@ export const EN = {
   'Génération…': 'Generating…',
   'Document généré.': 'Document generated.',
   // New version band
-  "La mise à jour redémarre l'application : les saisies non exportées seront perdues.":
-    'Updating restarts the application: inputs not exported will be lost.',
+  "L'application redémarre sur la nouvelle version ; la collecte en cours est conservée.":
+    'The application restarts on the new version; the collection in progress is kept.',
   'Mettre à jour': 'Update',
-  'Redémarrer et mettre à jour': 'Restart and update',
   'Voir la release': 'See the release',
   'Téléchargement de la mise à jour…': 'Downloading the update…',
   'Redémarrage sur la nouvelle version…': 'Restarting on the new version…',
@@ -86,6 +85,7 @@ const PATTERNS = [
   [/^· sans réponse : (.*)$/, '· no response: $1'],
   [/^non collecté \((.*)\)$/, 'not collected ($1)'],
   [/^Version (\S+) disponible\.$/, 'Version $1 available.'],
+  [/^Collecte de (.+) reprise après la mise à jour : (\d+) cluster\(s\)\.$/, 'Collection of $1 restored after the update: $2 cluster(s).'],
 ];
 
 // Server and validation messages: fragments of composed messages, replaced wherever they appear.
@@ -107,6 +107,7 @@ const FRAGMENTS = [
   [/Template illisible : ce n'est pas un \.docx/g, 'Unreadable template: not a .docx'],
   [/Téléchargement de la mise à jour impossible/g, 'The update could not be downloaded'],
   [/Mise à jour automatique indisponible/g, 'Automatic update unavailable'],
+  [/Sauvegarde de la collecte (invalide|indisponible)/g, (_, w) => `Collection backup ${w === 'invalide' ? 'invalid' : 'unavailable'}`],
   [/SVG illisible pour la rasterisation/g, 'Diagram could not be rendered to an image'],
   [/Le template ne contient pas le marqueur (\S+)/g, 'The template does not contain the $1 marker'],
   [/Le template ne contient pas le style de tableau « (.+?) »/g, 'The template does not contain the "$1" table style'],
