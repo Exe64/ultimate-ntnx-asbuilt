@@ -83,7 +83,7 @@ npx bun build desktop/main.js --target=bun --external electrobun --outdir /tmp/c
 ```
 
 ```powershell
-# T3 — Windows 11, à la première release après v0.3.2 (v0.3.2 installée) : collecter ou importer
+# T3 — Windows 11 : version contenant ce code installée (v0.3.3), mise à jour vers la suivante. Collecter ou importer
 #      une collecte, saisir un client, cliquer « Mettre à jour ». Après le redémarrage :
 #      la collecte et le client sont revenus, message « Collecte de … reprise après la mise à jour ».
 Get-ChildItem $env:LOCALAPPDATA\fr.juliendumur.ultimate-asbuilt\stable -Filter resume-after-update.json   # aucun fichier
@@ -99,7 +99,7 @@ Get-ChildItem $env:LOCALAPPDATA\fr.juliendumur.ultimate-asbuilt\stable -Filter r
 |------|------|---------|---------|---------|
 | 2026-11-18 | T1 — `npx bun test` | 0 fail | 31 pass, 0 fail, 424 assertions, 6 fichiers (dont `tests/resume.test.js` : 5 tests) | ✅ |
 | 2026-11-18 | T2 — builds page et desktop | OK | `web build ok`, `desktop build ok` | ✅ |
-| 2026-11-18 | T3 — Windows 11, mise à jour réelle | Collecte restaurée | En attente : la v0.3.2 installée n'a pas ce code, il faut une release suivante | ⏳ |
+| 2026-11-18 | T3 — Windows 11, mise à jour réelle | Collecte restaurée | En attente : la sauvegarde est faite par la version de départ ; elle doit contenir ce code (v0.3.3), donc test lors de la mise à jour v0.3.3 → suivante | ⏳ |
 
 ## Journal de session
 
@@ -109,4 +109,4 @@ Get-ChildItem $env:LOCALAPPDATA\fr.juliendumur.ultimate-asbuilt\stable -Filter r
 - 🔨 `server/resume.js` (lu et supprimé au démarrage du serveur, rendu une fois, retiré si la mise à jour échoue) ; `POST /api/update/apply` accepte `{ resume }`, refuse tout autre format que l'export ; `GET /api/resume` (jeton) ; `desktop/main.js` : fichier dans `Updater.appDataFolder()`, à défaut `%TEMP%`.
 - 🔨 Page : l'export part avec le clic « Mettre à jour », reprise au lancement par le même chemin que l'import (`restore()`), avertissement et second clic retirés, remplacés par « la collecte en cours est conservée » ; libellés traduits et testés ; README à jour.
 - 📝 Vu en passant : l'infobulle du bouton grisé (« Disponible une fois la collecte… ») n'est pas traduite, `translateNode` ne traite pas l'attribut `title` (#13).
-- ⏳ Reste : T3 sur Windows à la prochaine release, puis ✅ Validation et clôture.
+- ⏳ Reste : T3 sur Windows lors de la mise à jour depuis v0.3.3 (première version qui sauvegarde), puis ✅ Validation et clôture.
