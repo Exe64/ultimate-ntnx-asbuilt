@@ -2,8 +2,8 @@
 plan:
   id: '9'
   name: 9-app-desktop-windows.md
-  link: https://github.com/Exe64/ultimate-ntnx-asbuilt/blob/main/doc/roadmap/9-app-desktop-windows.md
-status: active
+  link: https://github.com/Exe64/ultimate-ntnx-asbuilt/blob/main/doc/roadmap/done/9-app-desktop-windows.md
+status: done
 date: 2026-11-17
 description: >
   Sous Windows 11, une application Electrobun (fenêtre native WebView2) affiche la page
@@ -53,12 +53,12 @@ fermer la fenêtre arrête le serveur.
 
 - [x] Étape 1 — Extraire de `server/main.js` un `startServer()` qui renvoie URL et jeton ; console et ouverture du navigateur restent dans le point d'entrée actuel, tests existants verts (S · standard → Sonnet)
 - [x] Étape 2 — Prototype : `electrobun.config` + `desktop/main.js` (serveur dans le processus Bun principal, fenêtre sur `127.0.0.1/#jeton`, quitter à la fermeture) ; job CI `windows-latest` qui publie le `Setup.zip` en artefact de workflow. ⏸️ Test manuel Windows 11 (rendu, collecte, téléchargement .docx/.json) ; si échec, arrêt et décision commune (L · reasoning → Opus)
-- [ ] Étape 3 — Packaging : icône utilisateur (`win.icon`), nom et identifiant de l'application, version reprise de `package.json` (S · standard → Sonnet)
+- [x] Étape 3 — Packaging : icône utilisateur (`win.icon`), nom et identifiant de l'application, version reprise de `package.json` (S · standard → Sonnet)
 - [x] Étape 4 — Icônes uniformisées : `assets/icon.ico` (16→256 px) régénéré depuis le nouveau logo, carré arrondi fond anthracite, coins transparents ; `assets/icon.png` supprimé ; exe portable Windows compilé dans le job `windows-latest` avec `--windows-icon`, il remplace dans la release celui du job Ubuntu (M · standard → Sonnet)
-- [ ] Étape 5 — Release : sur tag `v*`, le job Windows joint `ultimate-asbuilt-windows-x64-Setup.zip` à la release, à côté des cinq exécutables ; job Ubuntu inchangé (M · standard → Sonnet)
+- [x] Étape 5 — Release : sur tag `v*`, le job Windows joint `ultimate-asbuilt-windows-x64-Setup.zip` à la release, à côté des cinq exécutables ; job Ubuntu inchangé (M · standard → Sonnet)
 - [x] Étape 6 — README : installeur ou exe portable, avertissement SmartScreen, Windows 11 requis pour l'application desktop (XS · standard → Sonnet)
-- [ ] 🧪 Tests — Rédiger et exécuter la procédure de test (avant-dernière étape, obligatoire)
-- [ ] ✅ Validation — Vérifier les résultats des tests et clôturer (dernière étape, obligatoire)
+- [x] 🧪 Tests — Rédiger et exécuter la procédure de test (avant-dernière étape, obligatoire)
+- [x] ✅ Validation — Vérifier les résultats des tests et clôturer (dernière étape, obligatoire)
 
 Lots : Lot 1 (étapes 1–2, prototype et point de décision), Lot 2 (étapes 3–8).
 
@@ -156,7 +156,15 @@ Sur le poste Windows 11 :
 | 2026-11-17 | Étape 2 — prototype sur Windows 11, 3e essai (procédure ci-dessus) | voir résultats attendus | points 1 à 7 conformes (journal) | ✅ PASS |
 | 2026-11-18 | Étapes 4–6 — `npm test` et syntaxe de `ci.yml` (local) | 17 pass ; YAML valide | 17 pass, 0 fail ; YAML valide | ✅ PASS |
 | 2026-11-18 | Étape 4 — `icon.ico` | 7 tailles 16→256 en PNG, coins transparents | 7 entrées PNG (77 Ko) ; aperçu 256 conforme ; 16 px lisible (page + coin vert) | ✅ PASS |
-| — | Étapes 3–6 — CI `workflow_dispatch` + contrôle Windows 11 (procédure ci-dessus) | voir résultats attendus | en attente du push | ⏳ |
+| 2026-11-18 | Étape 5 — release sur tag `v0.2.2` (run 44202168796) | Jobs verts ; installeur et exe Windows joints à côté des exécutables | test ✅, release ✅, desktop-windows ✅ ; release : 4 exe Linux/macOS + `windows-x64.exe` + `windows-x64-Setup.zip` | ✅ PASS (CI) |
+| 2026-11-18 | Étapes 3–4 — Windows 11, binaires v0.2.2 : icône exe portable, exe portable fonctionnel, logo menu Démarrer / barre des tâches / fenêtre, aucun processus après fermeture | Conformes | Points 1, 2, 3 et 5 conformes | ✅ PASS |
+| 2026-11-18 | Étape 3 — Windows 11, Gestionnaire des tâches (point 4) | Groupe « Ultimate As-Built » avec le logo | Groupe « Bun » avec l'icône de Bun ; la fenêtre « Ultimate As-Built Generator » est rangée dessous | ❌ FAIL |
+| 2026-11-18 | Point 4 — diagnostic : `bin/bun.exe` extrait de l'installeur v0.2.2 (`Setup.tar.zst`) | Ressources de version renommées | Un seul bloc de version : `FileDescription` et `ProductName` = « Ultimate As-Built Generator ». Le binaire livré est correct ; cause probable : cache Windows (MuiCache / cache d'icônes) gardé des prototypes installés au même chemin | 🔎 cause |
+| 2026-11-18 | Point 4 — processus réel (Windows 11) | Fenêtre portée par le `bun.exe` installé, bonne description | `…\fr.juliendumur.ultimate-asbuilt\stable\app\bin\bun.exe`, Description « Ultimate As-Built Generator », 0.2.2 | ✅ |
+| 2026-11-18 | Point 4 — MuiCache vidé (entrée `bun.exe` = « Bun » / « Oven » présente), `ie4uinit -show`, relance | Groupe renommé | Toujours « Bun » | ❌ FAIL |
+| 2026-11-18 | Point 4 — ressources de `bun.exe` (v0.2.2) | Icônes et version à nous seulement | Les 7 `RT_ICON` sont les nôtres ; un seul `RT_VERSION` correct ; il reste le groupe `IDI_MYICON` de Bun (1 entrée, pointe sur notre icône 16 px) en plus de notre groupe `1`. Rien dans le fichier ne donne « Bun » ni l'icône de Bun : la source est un cache de Windows | 🔎 cause |
+| 2026-11-18 | Point 4 — redémarrage, puis « Accéder aux détails » et arbre des processus | — | Toujours « Bun » ; le groupe pointe sur le `bun.exe` installé (propriétés : notre icône, bonne description) ; arbre launcher → bun → msedgewebview2 propre | 🔎 |
+| 2026-11-18 | Point 4 — même app copiée dans `%TEMP%\uab-test` (chemin jamais vu par Windows) et lancée | Groupe « Ultimate As-Built Generator » avec le logo | Groupe « Ultimate As-Built Generator » avec le logo | ✅ PASS |
 
 > Vérification : self-check inline (pas de sous-agent vérificateur), résultats bruts ci-dessus.
 
@@ -177,3 +185,6 @@ Sur le poste Windows 11 :
 - ✅ Étape 4 : `icon.ico` régénéré (carré arrondi, 7 tailles PNG), `icon.png` supprimé ; job `desktop-windows` : exe portable compilé avec `--windows-icon`, smoke test, artefact, joint à la release par-dessus celui du job Ubuntu.
 - ✅ Étape 6 : README, section Windows (application ou exe portable, SmartScreen, Windows 11) et publication.
 - 📋 Prochain : push, run CI `workflow_dispatch`, contrôle Windows 11 (étapes 3 et 4) ; étape 5 éprouvée à la prochaine release.
+- 🔎 Point 4 (Gestionnaire des tâches « Bun ») : binaire v0.2.2 correct (version, icônes, aucun AUMID) ; cause = cache Windows lié au chemin d'installation, hérité des prototypes. Lancée depuis un chemin neuf, l'app s'affiche sous son nom et son logo. Une installation neuve n'est pas concernée ; aucun changement de code.
+- 📝 Reste connu : le groupe d'icônes `IDI_MYICON` de Bun subsiste dans `bun.exe` (pointe sur notre icône 16 px) ; sans effet visible constaté.
+- ✅ Validation : étapes 1 à 6 livrées, tests Windows 11 conformes ; plan clôturé.

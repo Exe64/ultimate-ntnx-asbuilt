@@ -13,13 +13,7 @@ Backlog consolidé : plans nommés d'après leur issue GitHub (voir `doc/roadmap
 
 ## À faire
 
-Ordre de réalisation : #9.
-
-### [Issue: #9] Application desktop Windows (Electrobun) [PRIORITÉ: MOYENNE] [Complexité: L] 🟢
-
-Plan : [`9-app-desktop-windows.md`](9-app-desktop-windows.md)
-
-Sous Windows 11, fenêtre native Electrobun sans console ni navigateur ; installeur ajouté à la release à côté de l'exe portable. Prototype d'abord, test manuel Windows à l'étape 2.
+Aucun plan en cours.
 
 ---
 
@@ -48,6 +42,8 @@ Sous Windows 11, fenêtre native Electrobun sans console ni navigateur ; install
   [`11-theme-sombre-habillage.md`](done/11-theme-sombre-habillage.md)
 - **[Issue: #12] `#12` — Pied de page, Ko-fi et nouveau nom** (2026-11-18) 🔵 — Pied de page (version, signature, © Tous droits réservés, non-affiliation Nutanix, liens GitHub et Blog selon la langue) ; bouton Ko-fi avec logo officiel ; application renommée « Ultimate As-Built Generator » (page, fenêtre, build, README).
   [`12-copyright-pied-de-page.md`](done/12-copyright-pied-de-page.md)
+- **[Issue: #9] `#9` — Application desktop Windows (Electrobun)** (2026-11-18) 🔵 — Fenêtre native WebView2 sans console ni navigateur, fermer la fenêtre arrête le serveur ; installeur et exe portable à icône joints à la release (v0.2.2) ; validé sur Windows 11. « Bun » dans le Gestionnaire des tâches : cache Windows des prototypes, pas le binaire.
+  [`9-app-desktop-windows.md`](done/9-app-desktop-windows.md)
 
 ---
 
