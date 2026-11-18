@@ -13,8 +13,6 @@ Backlog consolidé : plans nommés d'après leur issue GitHub (voir `doc/roadmap
 
 ## À faire
 
-- **[Issue: #14] `#14` — Pied de page : mention de licence** 🟢 medium · XS — La licence GPL-3.0, avec un lien, à la place de « Tous droits réservés ».
-  [`14-pied-de-page-licence.md`](14-pied-de-page-licence.md)
 - **[Issue: #15] `#15` — Sauvegarde automatique avant une mise à jour** 🟢 medium · M — La collecte et les saisies survivent au redémarrage d'une mise à jour.
   [`15-sauvegarde-avant-mise-a-jour.md`](15-sauvegarde-avant-mise-a-jour.md)
 - **[Issue: #16] `#16` — Comparaison de deux collectes** 🟢 medium · L — Rapport d'écarts .docx entre deux collectes exportées.
@@ -51,6 +49,8 @@ Backlog consolidé : plans nommés d'après leur issue GitHub (voir `doc/roadmap
   [`9-app-desktop-windows.md`](done/9-app-desktop-windows.md)
 - **[Issue: #13] `#13` — Mise à jour depuis l'application** (2026-11-18) 🔵 — Vérification au lancement (5 s, silencieuse hors ligne, `NO_UPDATE_CHECK=1`) ; application Windows : bandeau et mise à jour en un clic (Updater Electrobun, fichiers joints à la release) ; exécutables portables : lien vers la release ; journal `%TEMP%\ultimate-asbuilt-update.log` ; dépôt public ; validé sur Windows 11 (v0.3.2). Mise à jour automatique à partir de v0.3.2.
   [`13-mise-a-jour-application.md`](done/13-mise-a-jour-application.md)
+- **[Issue: #14] `#14` — Pied de page : mention de licence** (2026-11-18) 🔵 — « © 2026 · Licence GPL-3.0 » avec lien vers `LICENSE`, à la place de « Tous droits réservés ».
+  [`14-pied-de-page-licence.md`](done/14-pied-de-page-licence.md)
 
 ---
 

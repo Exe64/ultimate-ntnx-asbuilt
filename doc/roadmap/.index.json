@@ -118,12 +118,12 @@
   },
   {
     "id": "14",
-    "status": "active",
+    "status": "done",
     "priority": "medium",
     "complexity": "XS",
     "title": "[⚖️] Plan #14 - Pied de page : mention de licence",
     "deps": [],
-    "path": "14-pied-de-page-licence.md"
+    "path": "done/14-pied-de-page-licence.md"
   },
   {
     "id": "15",

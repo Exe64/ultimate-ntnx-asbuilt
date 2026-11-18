@@ -2,8 +2,8 @@
 plan:
   id: '14'
   name: 14-pied-de-page-licence.md
-  link: https://github.com/Exe64/ultimate-ntnx-asbuilt/blob/main/doc/roadmap/14-pied-de-page-licence.md
-status: active
+  link: https://github.com/Exe64/ultimate-ntnx-asbuilt/blob/main/doc/roadmap/done/14-pied-de-page-licence.md
+status: done
 date: 2026-11-18
 description: >
   Pied de page : la licence GPL-3.0, avec un lien, à la place de « Tous droits réservés ».
@@ -37,9 +37,9 @@ Le pied de page affiche « © 2026 Tous droits réservés », ce qui contredit l
 
 ## Étapes
 
-- [ ] Étape 1 — « © 2026 · Licence GPL-3.0 » (lien vers `LICENSE`) à la place de « © 2026 Tous droits réservés. », en français et en anglais (XS · standard → Sonnet)
-- [ ] 🧪 Tests — Rédiger et exécuter la procédure de test
-- [ ] ✅ Validation — Vérifier les résultats des tests et clôturer
+- [x] Étape 1 — « © 2026 · Licence GPL-3.0 » (lien vers `LICENSE`) à la place de « © 2026 Tous droits réservés. », en français et en anglais (XS · standard → Sonnet)
+- [x] 🧪 Tests — Rédiger et exécuter la procédure de test
+- [x] ✅ Validation — Vérifier les résultats des tests et clôturer
 
 ## Décisions techniques
 
@@ -70,8 +70,12 @@ grep -c "Tous droits réservés" web/index.html web/i18n.js   # 0 attendu
 
 | Date | Test | Attendu | Observé | Verdict |
 |------|------|---------|---------|---------|
+| 2026-11-18 | `npx bun test tests/i18n.test.js` | 0 fail | 2 pass, 0 fail, 13 assertions | ✅ |
+| 2026-11-18 | `grep -c "Tous droits réservés"` dans `web/index.html`, `web/i18n.js` | 0 | 0, 0 | ✅ |
 
 ## Journal de session
 
 ### 2026-11-18
 - ✅ Issue #14 et plan créés (cadrage par l'exécutant, sur consigne de l'utilisateur).
+- 🔨 Pied de page : « © 2026 · Licence GPL-3.0 », lien vers `LICENSE` ; anglais « GPL-3.0 license ».
+- ✅ Validation : tests conformes ; plan clôturé le 2026-11-18.
