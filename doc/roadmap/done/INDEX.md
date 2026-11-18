@@ -17,3 +17,4 @@
 | #10 | [🧭] Plan #10 - Fiche du Prism Central | medium | M | [`10-fiche-prism-central.md`](10-fiche-prism-central.md) |
 | #11 | [🌗] Plan #11 - Thème sombre et habillage de l'interface | medium | M | [`11-theme-sombre-habillage.md`](11-theme-sombre-habillage.md) |
 | #12 | [©] Plan #12 - Copyright en pied de page | low | XS | [`12-copyright-pied-de-page.md`](12-copyright-pied-de-page.md) |
+| #13 | [⬆️] Plan #13 - Mise à jour depuis l'application | medium | L | [`13-mise-a-jour-application.md`](13-mise-a-jour-application.md) |

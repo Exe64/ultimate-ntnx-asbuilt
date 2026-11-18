@@ -13,8 +13,7 @@ Backlog consolidé : plans nommés d'après leur issue GitHub (voir `doc/roadmap
 
 ## À faire
 
-- **[Issue: #13] `#13` — Mise à jour depuis l'application** 🟢 medium · L — L'application Windows signale une nouvelle release stable et se met à jour en un clic ; les exécutables portables affichent la nouvelle version avec un lien vers la release.
-  [`13-mise-a-jour-application.md`](13-mise-a-jour-application.md)
+Aucun plan en cours.
 
 ---
 
@@ -45,6 +44,8 @@ Backlog consolidé : plans nommés d'après leur issue GitHub (voir `doc/roadmap
   [`12-copyright-pied-de-page.md`](done/12-copyright-pied-de-page.md)
 - **[Issue: #9] `#9` — Application desktop Windows (Electrobun)** (2026-11-18) 🔵 — Fenêtre native WebView2 sans console ni navigateur, fermer la fenêtre arrête le serveur ; installeur et exe portable à icône joints à la release (v0.2.2) ; validé sur Windows 11. « Bun » dans le Gestionnaire des tâches : cache Windows des prototypes, pas le binaire.
   [`9-app-desktop-windows.md`](done/9-app-desktop-windows.md)
+- **[Issue: #13] `#13` — Mise à jour depuis l'application** (2026-11-18) 🔵 — Vérification au lancement (5 s, silencieuse hors ligne, `NO_UPDATE_CHECK=1`) ; application Windows : bandeau et mise à jour en un clic (Updater Electrobun, fichiers joints à la release) ; exécutables portables : lien vers la release ; journal `%TEMP%\ultimate-asbuilt-update.log` ; dépôt public ; validé sur Windows 11 (v0.3.2). Mise à jour automatique à partir de v0.3.2.
+  [`13-mise-a-jour-application.md`](done/13-mise-a-jour-application.md)
 
 ---
 

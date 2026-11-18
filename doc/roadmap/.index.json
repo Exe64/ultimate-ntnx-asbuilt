@@ -109,11 +109,11 @@
   },
   {
     "id": "13",
-    "status": "active",
+    "status": "done",
     "priority": "medium",
     "complexity": "L",
     "title": "[⬆️] Plan #13 - Mise à jour depuis l'application",
     "deps": [],
-    "path": "13-mise-a-jour-application.md"
+    "path": "done/13-mise-a-jour-application.md"
   }
 ]

@@ -2,8 +2,8 @@
 plan:
   id: '13'
   name: 13-mise-a-jour-application.md
-  link: https://github.com/Exe64/ultimate-ntnx-asbuilt/blob/main/doc/roadmap/13-mise-a-jour-application.md
-status: active
+  link: https://github.com/Exe64/ultimate-ntnx-asbuilt/blob/main/doc/roadmap/done/13-mise-a-jour-application.md
+status: done
 date: 2026-11-18
 description: >
   L'application desktop Windows signale une nouvelle release stable et se met à jour en un clic ;
@@ -60,9 +60,9 @@ Quand une release stable `v*` est publiée, l'application desktop Windows le sig
 ### Lot 2 — CI, releases, validation Windows
 - [x] Étape 4 — CI : job `desktop-windows` joint `artifacts/*` à la release sans renommage, `*-update.json` en dernier ; `Setup.zip` garde son nom ; smoke tests verts (S · standard → Sonnet)
 - [x] Étape 5 — README (section « Mises à jour », `NO_UPDATE_CHECK`) et note de transition dans les notes de release v0.3.0 (XS · standard → Sonnet)
-- [ ] Étape 6 — Releases : tag `v0.3.0`, puis `v0.3.1` (petite correction) (S · standard → Sonnet)
-- [ ] 🧪 Tests — Rédiger et exécuter la procédure de test, dont la mise à jour réelle v0.3.0 → v0.3.1 sur Windows 11
-- [ ] ✅ Validation — Vérifier les résultats des tests et clôturer
+- [x] Étape 6 — Releases : tag `v0.3.0`, puis `v0.3.1` (petite correction) ; `v0.3.2` ajoutée pour livrer le correctif `version.json` (S · standard → Sonnet)
+- [x] 🧪 Tests — Rédiger et exécuter la procédure de test, dont la mise à jour réelle v0.3.0 → v0.3.1 sur Windows 11
+- [x] ✅ Validation — Vérifier les résultats des tests et clôturer
 
 ## Décisions techniques
 
@@ -101,10 +101,29 @@ npm ci
 ### Procédure de test
 
 ```bash
-# À compléter à l'étape 🧪 Tests
+# T1 — Suite automatisée (WSL ou CI)
+cd ~/dev/ultimate-ntnx-asbuilt && npx bun test
+# T2 — Fichiers de mise à jour servis sans authentification (dépôt public)
+B=https://github.com/Exe64/ultimate-ntnx-asbuilt/releases/latest/download
+curl -sL "$B/stable-win-x64-update-v2.json?$RANDOM"     # manifeste de la dernière release
+# T3 — Smoke test CI (job desktop-windows) : l'app lancée depuis %SystemRoot% doit journaliser
+#      "local <version> stable <hash> <baseUrl>" (sinon le job échoue)
 ```
 
-**Résultats attendus :** à compléter.
+```powershell
+# T4 — Windows 11 (Smart App Control désactivé), build plus ancien que la release installé à la main :
+#      lancer l'application, attendre le bandeau, cliquer « Mettre à jour », puis :
+Get-Content $env:TEMP\ultimate-asbuilt-update.log
+# T5 — Windows 11 : dernière release installée à la main, lancée depuis le menu Démarrer :
+Get-Content $env:TEMP\ultimate-asbuilt-update.log
+```
+
+**Résultats attendus :**
+- T1 : 0 fail.
+- T2 : manifeste JSON de la dernière release (identifier, channel `stable`, platform `win`, version).
+- T3 : ligne `local <version> stable …` dans la sortie du smoke test.
+- T4 : bandeau « Version X disponible. » avec « Mettre à jour » ; journal `[update-available]`, `[download-complete] … verified, and staged`, `[launching-new-version]`.
+- T5 : pied de page à la version de la release, pas de bandeau ; journal `local <version> stable <hash>` puis `[no-update] Already on latest version`.
 
 ### Résultats joués et vérifiés
 
@@ -115,6 +134,9 @@ npm ci
 | 2026-11-18 | CI run 44397879270, smoke test lancé depuis `%SystemRoot%` (correctif `version.json`) | `local 0.3.1 stable …` puis `[update-available]` | `version.json found`, `local 0.3.1 stable 2gyc9orxpzgsr …/releases/latest/download`, `[update-available] 2gyc9orx → gnenf705`, `updateAvailable: true` | ✅ |
 | 2026-11-18 | Windows 11 : build de test (run 44397879270) installé, lancé | Bandeau avec « Mettre à jour » | Bandeau « Version 0.3.1 disponible. » affiché (capture). Défaut vu : avertissement visible d'emblée (CSS `display: block` sur `[hidden]`), corrigé dans `f883978` | ✅ (défaut corrigé) |
 | 2026-11-18 | Windows 11 : clic « Mettre à jour » | Téléchargement, vérification, installation, redémarrage | `[download-complete] … verified, and staged` (19 s), `updateReady: true`, `[applying]`, `[launching-new-version] … restarting application` | ✅ |
+| 2026-11-18 | T3 — CI run 44399636302 (tag v0.3.2), smoke test | `local 0.3.2 stable …` | `version.json found`, `local 0.3.2 stable 2q8v7vcm7bww4 …`. Vérification en 404 : course attendue, release créée par le job Ubuntu avant les manifestes du job Windows | ✅ |
+| 2026-11-18 | T2 — manifeste servi après la release v0.3.2 | v0.3.2 | `version 0.3.2`, `hash 2q8v7vcm7bww4`, `tarSha256` présent | ✅ |
+| 2026-11-18 | T5 — Windows 11 : v0.3.2 installée à la main, lancée | Pas de bandeau ; `[no-update]` | `local 0.3.2 stable 2q8v7vcm7bww4 …`, `[no-update] Already on latest version`, `updateAvailable: false` (journal utilisateur) | ✅ |
 | 2026-11-18 | Auto-check exécuteur : suite complète (`npx bun test`), dont `tests/update.test.js` (versions, faux GitHub, hors ligne, délai, `NO_UPDATE_CHECK`, une seule vérification, routes `/api/update` et `/api/update/apply`) et couverture i18n du bandeau | 0 fail | 26 pass, 0 fail, 402 assertions, 5 fichiers | ✅ |
 
 ## Journal de session
@@ -139,3 +161,8 @@ npm ci
 - ❌ Build de test installé : pas de bandeau. Journal : `local` vide puis `[error] Unsupported update channel: ""`.
 - 💡 Cause racine : `Updater.getLocalInfo()` (Electrobun 2.0.6) lit `../Resources/version.json` **relativement au répertoire courant**, attendu = dossier de `bun.exe`, et garde le résultat (vide) toute la session. Or `desktop/main.js` fait `process.chdir(import.meta.dir)` depuis le plan #9 (lancement par le menu Démarrer). Le canal lu est donc vide et la vérification échoue avant toute requête réseau.
 - 🔨 Correctif : `chdir` vers `dirname(process.execPath)`, `Updater.getLocalInfo()` (mis en cache), puis `chdir(import.meta.dir)`. Smoke test CI (lancé depuis `%SystemRoot%`) : échoue si le journal ne contient pas `local <version> stable`.
+- ✅ Mise à jour en un clic validée sur Windows 11 (build de test → release v0.3.1) : détection, téléchargement 19 s, vérification, installation, redémarrage.
+- 🔨 `f883978` : avertissement du bandeau masqué tant qu'il n'est pas utile (`display: block` l'emportait sur `hidden`).
+- 🚀 v0.3.2 (correctifs `version.json`, avertissement, journal) ; README : mise à jour automatique à partir de v0.3.2, journal cité ; note FR/EN « installer une fois à la main » en tête des notes de release v0.3.2.
+- ✅ Validation : v0.3.2 installée à la main, `[no-update]` au lancement. Plan clôturé le 2026-11-18.
+- 📝 Reste hors plan : aucun patch différentiel produit par Hutch pour v0.3.1 et v0.3.2 (archive complète ~48 Mo à chaque mise à jour) ; le cycle complet entre deux releases réelles (v0.3.2 → suivante) sera observé à la prochaine release. Avertissements CI : actions en Node 20, migration `ubuntu-latest` vers Ubuntu 26.
