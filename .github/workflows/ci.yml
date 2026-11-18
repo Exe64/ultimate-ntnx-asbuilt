@@ -113,13 +113,14 @@ jobs:
       - name: Rename installer
         shell: bash
         run: mv artifacts/*Setup.zip ultimate-asbuilt-windows-x64-Setup.zip
-      # What is left in artifacts/ is the updater's: update.json, checksum, full archive, and a
-      # patch from the previous release when Hutch could reach it. Names must stay as built.
+      # What is left in artifacts/ is the updater's: update.json (and update-v2.json), the full
+      # archive, a patch from the previous release when Hutch could reach it, and a checksum file
+      # with newer toolchains. Names must stay as built; only the manifest and archive are required.
       - name: List update files
         shell: bash
         run: |
           ls -la artifacts
-          ls artifacts/*-update.json artifacts/*-checksum.json artifacts/*.tar.zst >/dev/null
+          ls artifacts/*-update.json artifacts/*.tar.zst >/dev/null
       - uses: actions/upload-artifact@v4
         with:
           name: ultimate-asbuilt-windows-x64-update
@@ -142,7 +143,7 @@ jobs:
           # Updater files: archive, checksum and patches first, update.json last, so a client
           # never reads a manifest whose archive is not there yet.
           shopt -s extglob
-          gh release upload "$GITHUB_REF_NAME" artifacts/!(*-update.json) --clobber
-          gh release upload "$GITHUB_REF_NAME" artifacts/*-update.json --clobber
+          gh release upload "$GITHUB_REF_NAME" artifacts/!(*-update.json|*-update-v2.json) --clobber
+          gh release upload "$GITHUB_REF_NAME" artifacts/*-update*.json --clobber
         env:
           GH_TOKEN: ${{ github.token }}
