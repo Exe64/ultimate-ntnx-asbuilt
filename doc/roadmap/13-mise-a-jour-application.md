@@ -54,11 +54,11 @@ Quand une release stable `v*` est publiée, l'application desktop Windows le sig
 
 ### Lot 1 — code testable localement
 - [x] Étape 1 — Serveur : `server/update.js` (dernière release via l'API GitHub, délai 5 s, échec silencieux, comparaison de versions, source injectable pour le desktop) ; route `GET /api/update` ; tests avec un faux GitHub (M · standard → Sonnet)
-- [ ] Étape 2 — Desktop : `release.baseUrl` (`https://github.com/Exe64/ultimate-ntnx-asbuilt/releases/latest/download`) ; `Updater.checkForUpdate()` au démarrage dans `desktop/main.js`, branché sur `/api/update` ; `POST /api/update/apply` (téléchargement, application, redémarrage) (M · reasoning → Opus)
+- [x] Étape 2 — Desktop : `release.baseUrl` (`https://github.com/Exe64/ultimate-ntnx-asbuilt/releases/latest/download`) ; `Updater.checkForUpdate()` au démarrage dans `desktop/main.js`, branché sur `/api/update` ; `POST /api/update/apply` (téléchargement, application, redémarrage) (M · reasoning → Opus)
 - [x] Étape 3 — Page : bandeau bilingue, bouton ou lien selon la source, grisé pendant collecte/génération, confirmation ; libellés couverts par le test i18n (M · standard → Sonnet)
 
 ### Lot 2 — CI, releases, validation Windows
-- [ ] Étape 4 — CI : job `desktop-windows` joint `artifacts/*` à la release sans renommage, `*-update.json` en dernier ; `Setup.zip` garde son nom ; smoke tests verts (S · standard → Sonnet)
+- [x] Étape 4 — CI : job `desktop-windows` joint `artifacts/*` à la release sans renommage, `*-update.json` en dernier ; `Setup.zip` garde son nom ; smoke tests verts (S · standard → Sonnet)
 - [x] Étape 5 — README (section « Mises à jour », `NO_UPDATE_CHECK`) et note de transition dans les notes de release v0.3.0 (XS · standard → Sonnet)
 - [ ] Étape 6 — Releases : tag `v0.3.0`, puis `v0.3.1` (petite correction) (S · standard → Sonnet)
 - [ ] 🧪 Tests — Rédiger et exécuter la procédure de test, dont la mise à jour réelle v0.3.0 → v0.3.1 sur Windows 11
@@ -111,6 +111,10 @@ npm ci
 | Date | Test | Attendu | Observé | Verdict |
 |------|------|---------|---------|---------|
 | 2026-11-18 | Windows 11 (SAC désactivé) : installation manuelle de v0.3.0 depuis `Setup.zip` | L'application démarre, pied de page v0.3.0, pas de bandeau (dernière release) | Démarre en 0.3.0 (retour utilisateur) | ✅ |
+| 2026-11-18 | Windows 11 : v0.3.0 relancée, dépôt public | Bandeau « Version 0.3.1 disponible. » | Pas de bandeau : `version.json` non lu (cwd), voir journal | ❌ |
+| 2026-11-18 | CI run 44397879270, smoke test lancé depuis `%SystemRoot%` (correctif `version.json`) | `local 0.3.1 stable …` puis `[update-available]` | `version.json found`, `local 0.3.1 stable 2gyc9orxpzgsr …/releases/latest/download`, `[update-available] 2gyc9orx → gnenf705`, `updateAvailable: true` | ✅ |
+| 2026-11-18 | Windows 11 : build de test (run 44397879270) installé, lancé | Bandeau avec « Mettre à jour » | Bandeau « Version 0.3.1 disponible. » affiché (capture). Défaut vu : avertissement visible d'emblée (CSS `display: block` sur `[hidden]`), corrigé dans `f883978` | ✅ (défaut corrigé) |
+| 2026-11-18 | Windows 11 : clic « Mettre à jour » | Téléchargement, vérification, installation, redémarrage | `[download-complete] … verified, and staged` (19 s), `updateReady: true`, `[applying]`, `[launching-new-version] … restarting application` | ✅ |
 | 2026-11-18 | Auto-check exécuteur : suite complète (`npx bun test`), dont `tests/update.test.js` (versions, faux GitHub, hors ligne, délai, `NO_UPDATE_CHECK`, une seule vérification, routes `/api/update` et `/api/update/apply`) et couverture i18n du bandeau | 0 fail | 26 pass, 0 fail, 402 assertions, 5 fichiers | ✅ |
 
 ## Journal de session
