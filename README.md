@@ -79,8 +79,9 @@ Offline, or when GitHub does not answer within 5 s, nothing is shown. `NO_UPDATE
 the check off (see [Advanced settings](#advanced-settings)).
 
 > [!IMPORTANT]
-> The Windows app updates itself from **v0.3.0** on. Coming from v0.2.2 or older, install v0.3.0
-> once by hand with its `Setup.zip`.
+> The Windows app updates itself from **v0.3.2** on. Coming from v0.3.1 or older (their update
+> check cannot read the app's version), install v0.3.2 once by hand with its `Setup.zip`.
+> If no banner shows up when one is expected, `%TEMP%\ultimate-asbuilt-update.log` says why.
 
 ## Usage
 
