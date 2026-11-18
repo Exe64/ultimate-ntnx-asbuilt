@@ -110,6 +110,7 @@ npm ci
 
 | Date | Test | Attendu | Observé | Verdict |
 |------|------|---------|---------|---------|
+| 2026-11-18 | Windows 11 (SAC désactivé) : installation manuelle de v0.3.0 depuis `Setup.zip` | L'application démarre, pied de page v0.3.0, pas de bandeau (dernière release) | Démarre en 0.3.0 (retour utilisateur) | ✅ |
 | 2026-11-18 | Auto-check exécuteur : suite complète (`npx bun test`), dont `tests/update.test.js` (versions, faux GitHub, hors ligne, délai, `NO_UPDATE_CHECK`, une seule vérification, routes `/api/update` et `/api/update/apply`) et couverture i18n du bandeau | 0 fail | 26 pass, 0 fail, 402 assertions, 5 fichiers | ✅ |
 
 ## Journal de session
