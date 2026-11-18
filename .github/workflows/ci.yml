@@ -6,6 +6,11 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing release (e.g. v0.3.0) to attach the Windows build to; empty = artifacts only'
+        required: false
+        default: ''
 
 jobs:
   test:
@@ -133,17 +138,22 @@ jobs:
         with:
           name: ultimate-asbuilt-windows-x64
           path: ultimate-asbuilt-windows-x64.exe
+      # On a tag, its release; by hand, the release named in `release_tag` (rebuild after a failed job).
       - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release_tag != ''
         shell: bash
         run: |
+          # A rebuild by hand must carry the release's version, or installed apps would loop on it.
+          want="v$(node -p "require('./package.json').version")"
+          [ "$TAG" = "$want" ] || { echo "release_tag $TAG but package.json is $want"; exit 1; }
           # The release job creates the release; wait for it rather than racing it.
-          for i in $(seq 30); do gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 && break; sleep 10; done
-          gh release upload "$GITHUB_REF_NAME" ultimate-asbuilt-windows-x64-Setup.zip ultimate-asbuilt-windows-x64.exe --clobber
+          for i in $(seq 30); do gh release view "$TAG" >/dev/null 2>&1 && break; sleep 10; done
+          gh release upload "$TAG" ultimate-asbuilt-windows-x64-Setup.zip ultimate-asbuilt-windows-x64.exe --clobber
           # Updater files: archive, checksum and patches first, update.json last, so a client
           # never reads a manifest whose archive is not there yet.
           shopt -s extglob
-          gh release upload "$GITHUB_REF_NAME" artifacts/!(*-update.json|*-update-v2.json) --clobber
-          gh release upload "$GITHUB_REF_NAME" artifacts/*-update*.json --clobber
+          gh release upload "$TAG" artifacts/!(*-update.json|*-update-v2.json) --clobber
+          gh release upload "$TAG" artifacts/*-update*.json --clobber
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag || github.ref_name }}
