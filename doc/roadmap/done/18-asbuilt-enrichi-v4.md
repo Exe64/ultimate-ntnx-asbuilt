@@ -2,8 +2,8 @@
 plan:
   id: '18'
   name: 18-asbuilt-enrichi-v4.md
-  link: https://github.com/Exe64/ultimate-ntnx-asbuilt/blob/main/doc/roadmap/18-asbuilt-enrichi-v4.md
-status: active
+  link: https://github.com/Exe64/ultimate-ntnx-asbuilt/blob/main/doc/roadmap/done/18-asbuilt-enrichi-v4.md
+status: done
 date: 2026-11-27
 description: >
   Compléter l'as-built avec des données à forte valeur lues sur le Prism Central : bonds, segmentation,
@@ -60,7 +60,7 @@ le Prism Central. Ce plan les ajoute, en lisant le PC.
 - [x] Étape 4 — Faux Prism et tests : formes de la spec pour chaque appel, un test par section, bmc-info 404 sans erreur au journal (M · standard → Sonnet)
 - [x] Étape 5 — Documentation : README, `CONTEXT.md` (XS · standard → Sonnet)
 - [x] 🧪 Tests — `bun test`, recette lab PC seul et PC + PE
-- [ ] ✅ Validation — Vérifier les résultats des tests et clôturer
+- [x] ✅ Validation — Vérifier les résultats des tests et clôturer
 
 ## Décisions techniques
 
@@ -117,4 +117,4 @@ bun docall.mjs <dépôt> <scratchpad>        # .docx fr/en, PC seul et PC + PE, 
 - ✅ Fait : étapes 1 à 5 ; `bmc-info` abandonné (aucune version dans la réponse) ; 39 tests verts.
 - 📋 Prochain : 🧪 recette lab (identifiants PC et PE à redonner).
 - ✅ Fait : recette lab commune #18 + #19 (PC seul et PC + PE) ; écarts entre la spec et pc.7.6 corrigés (bonds, Witness, STIG).
-- 📋 Prochain : ✅ Validation et clôture.
+- ✅ Fait : ✅ Validation, plan clôturé (livré en v0.4.1).

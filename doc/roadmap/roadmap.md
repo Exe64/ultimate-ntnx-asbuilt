@@ -13,10 +13,6 @@ Backlog consolidé : plans nommés d'après leur issue GitHub (voir `doc/roadmap
 
 ## À faire
 
-- **[Issue: #18] `#18` — As-built enrichi : réseau, placement des VM, matériel, accès** 🟢 medium · L — Bonds, segmentation, affinités et démarrage des VM, blocs, résilience du stockage, BIOS/BMC, droits d'accès, sauvegarde du PC, LCM.
-  [`18-asbuilt-enrichi-v4.md`](18-asbuilt-enrichi-v4.md)
-- **[Issue: #19] `#19` — Sections de contexte et compléments Prism Element v1** 🟢 low · M — Chiffrement réel, Witness, support à distance, VM non protégées ; STIG, Flow VN, catalogue, iSCSI (décochés par défaut). Après #18.
-  [`19-sections-contexte-pe-v1.md`](19-sections-contexte-pe-v1.md)
 - **[Issue: #15] `#15` — Sauvegarde automatique avant une mise à jour** 🟢 medium · M — La collecte et les saisies survivent au redémarrage d'une mise à jour.
   [`15-sauvegarde-avant-mise-a-jour.md`](15-sauvegarde-avant-mise-a-jour.md)
 - **[Issue: #16] `#16` — Comparaison de deux collectes** 🟢 medium · L — Rapport d'écarts .docx entre deux collectes exportées.
@@ -57,6 +53,10 @@ Backlog consolidé : plans nommés d'après leur issue GitHub (voir `doc/roadmap
   [`14-pied-de-page-licence.md`](done/14-pied-de-page-licence.md)
 - **[Issue: #17] `#17` — As-built complet depuis le seul Prism Central** (2026-11-27) 🔵 — Document complet avec les seuls identifiants du PC (licences et conformité, CVM, NCC, ports, pools, SMTP, proxy, chiffrement, KMS, Pulse, alertes, recovery plans, SAML) ; étape Prism Element facultative avec bouton Passer, réservée à la HA, au nom et seuil ILM des pools, aux protection domains, à l'authentification du cluster et au vCPU des CVM ; ports v4 et adresses d'hôtes v4 corrigés ; lab pc.7.6 validé avec et sans PE.
   [`17-pe-optionnel-v4.md`](done/17-pe-optionnel-v4.md)
+- **[Issue: #18] `#18` — As-built enrichi : réseau, placement des VM, matériel, accès** (2026-11-27) 🔵 — Bonds et uplinks, segmentation, règles de placement et ordre de démarrage des VM, blocs, résilience du stockage, sauvegarde du PC, LCM, droits d'accès (décochés), traps SNMP, liste blanche NFS ; `bmc-info` abandonné (aucune version) ; lab pc.7.6 validé.
+  [`18-asbuilt-enrichi-v4.md`](done/18-asbuilt-enrichi-v4.md)
+- **[Issue: #19] `#19` — Sections de contexte et compléments Prism Element v1** (2026-11-27) 🔵 — Chiffrement réel via le PE v1, Witness, support à distance, VM non protégées ; politiques de stockage, alertes personnalisées, STIG, Flow VN (seulement avec des VPC), catalogue, iSCSI, décochés par défaut ; lab validé, écarts spec / pc.7.6 corrigés ; v0.4.1.
+  [`19-sections-contexte-pe-v1.md`](done/19-sections-contexte-pe-v1.md)
 
 ---
 

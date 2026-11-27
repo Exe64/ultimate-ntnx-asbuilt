@@ -2,8 +2,8 @@
 plan:
   id: '19'
   name: 19-sections-contexte-pe-v1.md
-  link: https://github.com/Exe64/ultimate-ntnx-asbuilt/blob/main/doc/roadmap/19-sections-contexte-pe-v1.md
-status: active
+  link: https://github.com/Exe64/ultimate-ntnx-asbuilt/blob/main/doc/roadmap/done/19-sections-contexte-pe-v1.md
+status: done
 date: 2026-11-27
 description: >
   Sections utiles selon le contexte (décochées par défaut) et compléments que seul le Prism Element expose :
@@ -53,7 +53,7 @@ depuis #6.
 - [x] Étape 3 — Sections : chiffrement réel (ligne « Données au repos »), Witness, support à distance, VM non protégées, politiques de stockage, alertes personnalisées, conformité sécurité, Flow VN, catalogue, iSCSI ; contexte décoché par défaut (M · standard → Sonnet)
 - [x] Étape 4 — Faux Prism, tests et documentation (M · standard → Sonnet)
 - [x] 🧪 Tests — `bun test`, recette lab PC seul et PC + PE
-- [ ] ✅ Validation — Vérifier les résultats des tests et clôturer
+- [x] ✅ Validation — Vérifier les résultats des tests et clôturer
 
 ## Décisions techniques
 
@@ -111,4 +111,4 @@ bun docall.mjs <dépôt> <scratchpad>        # .docx fr/en, PC seul et PC + PE, 
 - ✅ Fait : étapes 1 à 4 (une seule passe) ; 40 tests verts (dont « Flow Virtual Networking : interrogé seulement avec des VPC, sans secret »).
 - 📋 Prochain : recette commune #18 + #19 sur le lab (identifiants PC et PE à redonner).
 - ✅ Fait : recette lab commune #18 + #19 (PC seul et PC + PE) ; écarts entre la spec et pc.7.6 corrigés (bonds, Witness, STIG).
-- 📋 Prochain : ✅ Validation et clôture.
+- ✅ Fait : ✅ Validation, plan clôturé (livré en v0.4.1).

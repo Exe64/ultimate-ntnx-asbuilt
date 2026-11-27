@@ -154,22 +154,22 @@
   },
   {
     "id": "18",
-    "status": "active",
+    "status": "done",
     "priority": "medium",
     "complexity": "L",
     "title": "[🧩] Plan #18 - As-built enrichi : réseau, placement des VM, matériel, accès",
     "deps": [],
-    "path": "18-asbuilt-enrichi-v4.md"
+    "path": "done/18-asbuilt-enrichi-v4.md"
   },
   {
     "id": "19",
-    "status": "active",
+    "status": "done",
     "priority": "low",
     "complexity": "M",
     "title": "[🗂️] Plan #19 - Sections de contexte et compléments Prism Element v1",
     "deps": [
       "18"
     ],
-    "path": "19-sections-contexte-pe-v1.md"
+    "path": "done/19-sections-contexte-pe-v1.md"
   }
 ]
