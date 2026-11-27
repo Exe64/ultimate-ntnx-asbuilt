@@ -52,7 +52,7 @@ depuis #6.
 - [x] Étape 2 — Collecte PC : politiques de stockage, alertes personnalisées, STIG / security summaries / security profiles, Flow VN (seulement si des VPC existent), catalogue, iSCSI (M · standard → Sonnet)
 - [x] Étape 3 — Sections : chiffrement réel (ligne « Données au repos »), Witness, support à distance, VM non protégées, politiques de stockage, alertes personnalisées, conformité sécurité, Flow VN, catalogue, iSCSI ; contexte décoché par défaut (M · standard → Sonnet)
 - [x] Étape 4 — Faux Prism, tests et documentation (M · standard → Sonnet)
-- [ ] 🧪 Tests — `bun test`, recette lab PC seul et PC + PE
+- [x] 🧪 Tests — `bun test`, recette lab PC seul et PC + PE
 - [ ] ✅ Validation — Vérifier les résultats des tests et clôturer
 
 ## Décisions techniques
@@ -75,21 +75,34 @@ depuis #6.
 ### Prérequis pour les tests
 
 ```bash
-(à renseigner à l'étape 🧪 Tests — les identifiants du lab ne sont jamais écrits dans ce fichier)
+# Lab : Prism Central pc.7.6 et un cluster AOS 7.6.0.6 à un nœud (Community Edition).
+# Identifiants PC et PE dans deux fichiers du scratchpad (umask 077), supprimés après la recette.
+# Ils ne sont jamais écrits dans ce dépôt.
 ```
 
 ### Procédure de test
 
 ```bash
-(à renseigner à l'étape 🧪 Tests)
+bun test                                   # faux Prism, formes de la spec et formes relevées sur le lab
+bun livepe.mjs <dépôt> <scratchpad>        # collecte PC seul puis PC + PE, diff des sections
+bun new.mjs <dépôt> <scratchpad>           # sections #18/#19, toutes activées, + recherche des mots de passe dans les bundles
+bun docall.mjs <dépôt> <scratchpad>        # .docx fr/en, PC seul et PC + PE, toutes sections
 ```
 
-**Résultats attendus :** à renseigner.
+**Résultats attendus :** tests verts ; chaque section de #19 dit une donnée, « Non configuré » ou « Non collecté — raison » ; aucune erreur de collecte pour une fonction absente ; aucun mot de passe ni secret `k-…` dans les bundles et les documents ; pas de `{{` résiduel.
 
 ### Résultats joués et vérifiés
 
 | Date | Test | Attendu | Observé | Verdict |
 |------|------|---------|---------|---------|
+| 2026-11-27 | `bun test` | 40 verts | 40 verts, 524 assertions | ✅ |
+| 2026-11-27 | Collecte lab PC seul / PC + PE | Sans erreur | PC 54/54, PE 22/22, 0 erreur | ✅ |
+| 2026-11-27 | `.docx` fr/en, 78 sections, PC seul et PC + PE | Pas de `{{`, pas de fuite | Aucun `{{`, aucun mot de passe, aucun `k-…` | ✅ |
+| 2026-11-27 | Chiffrement réel (PE v1) | « Non » (lab non chiffré) | « Non » au repos, en PC seul comme en PC + PE | ✅ |
+| 2026-11-27 | Witness sans Metro | « Non configuré » | 1er passage : erreur 500 « features not enabled » comptée en erreur → traitée comme absente ; « Non configuré », PE 22/22 | ✅ |
+| 2026-11-27 | STIG | Synthèse + contrôles non conformes | 1er passage : PC listé sans compteurs, et 0 contrôle (le statut réel est `APPLICABLE`/`NEEDS_REVIEW`, pas `FAILED`) → corrigé ; 31/61/13 et 61 contrôles avec leur état | ✅ |
+| 2026-11-27 | Support à distance, VM non protégées, politiques de stockage, catalogue | Données du lab | Désactivé ; 8 VM ; Default-Storage ; VM-TEMPLATE | ✅ |
+| 2026-11-27 | Flow VN, iSCSI, alertes personnalisées | « Non configuré » (pas de VPC) | « Non configuré », sans appel FVN ; validé sur la spec | ✅ |
 
 ## Journal de session
 
@@ -97,3 +110,5 @@ depuis #6.
 - ✅ Fait : cadrage commun avec #18 ; issue #19 et plan créés.
 - ✅ Fait : étapes 1 à 4 (une seule passe) ; 40 tests verts (dont « Flow Virtual Networking : interrogé seulement avec des VPC, sans secret »).
 - 📋 Prochain : recette commune #18 + #19 sur le lab (identifiants PC et PE à redonner).
+- ✅ Fait : recette lab commune #18 + #19 (PC seul et PC + PE) ; écarts entre la spec et pc.7.6 corrigés (bonds, Witness, STIG).
+- 📋 Prochain : ✅ Validation et clôture.

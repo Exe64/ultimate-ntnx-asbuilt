@@ -59,7 +59,7 @@ le Prism Central. Ce plan les ajoute, en lisant le PC.
 - [x] Étape 3 — Sections : « Bonds et uplinks », « Segmentation réseau », traps SNMP, liste blanche NFS, « Règles de placement des VM », « Ordre de démarrage », « Blocs », « Résilience du stockage », « Sauvegarde du Prism Central », « Droits d'accès » (décochée), « Configuration LCM » ; libellés fr/en (L · reasoning → Opus)
 - [x] Étape 4 — Faux Prism et tests : formes de la spec pour chaque appel, un test par section, bmc-info 404 sans erreur au journal (M · standard → Sonnet)
 - [x] Étape 5 — Documentation : README, `CONTEXT.md` (XS · standard → Sonnet)
-- [ ] 🧪 Tests — `bun test`, recette lab PC seul et PC + PE
+- [x] 🧪 Tests — `bun test`, recette lab PC seul et PC + PE
 - [ ] ✅ Validation — Vérifier les résultats des tests et clôturer
 
 ## Décisions techniques
@@ -83,21 +83,32 @@ le Prism Central. Ce plan les ajoute, en lisant le PC.
 ### Prérequis pour les tests
 
 ```bash
-(à renseigner à l'étape 🧪 Tests — les identifiants du lab ne sont jamais écrits dans ce fichier)
+# Lab : Prism Central pc.7.6 et un cluster AOS 7.6.0.6 à un nœud (Community Edition).
+# Identifiants PC et PE dans deux fichiers du scratchpad (umask 077), supprimés après la recette.
+# Ils ne sont jamais écrits dans ce dépôt.
 ```
 
 ### Procédure de test
 
 ```bash
-(à renseigner à l'étape 🧪 Tests)
+bun test                                   # faux Prism, formes de la spec et formes relevées sur le lab
+bun livepe.mjs <dépôt> <scratchpad>        # collecte PC seul puis PC + PE, diff des sections
+bun new.mjs <dépôt> <scratchpad>           # sections #18/#19, toutes activées, + recherche des mots de passe dans les bundles
+bun docall.mjs <dépôt> <scratchpad>        # .docx fr/en, PC seul et PC + PE, toutes sections
 ```
 
-**Résultats attendus :** à renseigner.
+**Résultats attendus :** tests verts ; chaque section de #18 dit une donnée, « Non configuré » ou « Non collecté — raison » ; aucune erreur de collecte pour une fonction absente ; aucun mot de passe ni secret `k-…` dans les bundles et les documents ; pas de `{{` résiduel.
 
 ### Résultats joués et vérifiés
 
 | Date | Test | Attendu | Observé | Verdict |
 |------|------|---------|---------|---------|
+| 2026-11-27 | `bun test` | 40 verts | 40 verts, 524 assertions | ✅ |
+| 2026-11-27 | Collecte lab PC seul / PC + PE | Sans erreur | PC 54/54, PE 22/22, 0 erreur | ✅ |
+| 2026-11-27 | `.docx` fr/en, 78 sections, PC seul et PC + PE | Pas de `{{`, pas de fuite | Aucun `{{`, aucun mot de passe, aucun `k-…` | ✅ |
+| 2026-11-27 | Bonds | NICs nommées | 1er passage : extId vides, car pc.7.6 renvoie `hostNicReferences` en chaînes et non en objets → corrigé ; `br0-up`, Active-backup, 8 NICs nommées | ✅ |
+| 2026-11-27 | LCM, résilience du stockage, blocs, droits d'accès | Données du lab | LCM 3.4.1, site connecté ; seuil 75 % ; bloc CommunityEdition ; 4 politiques client + « 3 politique(s) système » | ✅ |
+| 2026-11-27 | Placement, démarrage, sauvegarde du PC, segments, traps SNMP | « Non configuré » (absent du lab) | « Non configuré » ; validé sur la spec (faux Prism) | ✅ |
 
 ## Journal de session
 
@@ -105,3 +116,5 @@ le Prism Central. Ce plan les ajoute, en lisant le PC.
 - ✅ Fait : inventaire croisé avec le dépôt NutanixAPISwaggers (197 appels de liste v4 et 57 ressources v1 non lus) ; cadrage ; issue #18 et plan créés.
 - ✅ Fait : étapes 1 à 5 ; `bmc-info` abandonné (aucune version dans la réponse) ; 39 tests verts.
 - 📋 Prochain : 🧪 recette lab (identifiants PC et PE à redonner).
+- ✅ Fait : recette lab commune #18 + #19 (PC seul et PC + PE) ; écarts entre la spec et pc.7.6 corrigés (bonds, Witness, STIG).
+- 📋 Prochain : ✅ Validation et clôture.
