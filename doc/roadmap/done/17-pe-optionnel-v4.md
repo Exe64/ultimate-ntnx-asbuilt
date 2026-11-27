@@ -2,8 +2,8 @@
 plan:
   id: '17'
   name: 17-pe-optionnel-v4.md
-  link: https://github.com/Exe64/ultimate-ntnx-asbuilt/blob/main/doc/roadmap/17-pe-optionnel-v4.md
-status: active
+  link: https://github.com/Exe64/ultimate-ntnx-asbuilt/blob/main/doc/roadmap/done/17-pe-optionnel-v4.md
+status: done
 date: 2026-11-27
 enriched: 2026-11-27
 description: >
@@ -73,8 +73,8 @@ avec ses seuls identifiants, et le PE devient un complément facultatif.
 - [x] Étape 5 — Interface : étape « Compléments Prism Element (HA, pools de stockage) » + bouton Passer vers le document (S · standard → Sonnet)
 - [x] Étape 6 — Documentation : README, note de priorité v4 → PE dans `CONTEXT.md` (XS · standard → Sonnet)
 
-- [ ] 🧪 Tests — `bun test`, puis recette lab PC seul et PC + PE, comparées avec le rapport d'écarts (#16)
-- [ ] ✅ Validation — Vérifier les résultats des tests et clôturer
+- [x] 🧪 Tests — `bun test`, puis recette lab PC seul et PC + PE, comparées avec le rapport d'écarts (#16)
+- [x] ✅ Validation — Vérifier les résultats des tests et clôturer
 
 ## Décisions techniques
 
@@ -87,7 +87,8 @@ avec ses seuls identifiants, et le PE devient un complément facultatif.
 | Authentification | SAML ajouté au chapitre PC ; section cluster seulement si PE | Les annuaires du PC sont déjà documentés côté PC |
 | HA | Sans PE, la section dit qu'elle requiert les identifiants Prism Element | Aucune API v4 ne l'expose ; mieux qu'une section qui disparaît |
 | Vitesse des liens | `linkSpeedInKbps` (négociée) + `linkCapacityInMbps` (capacité) en v4 | Mesuré sur le lab : eth7 10 000 000 kbps, ports débranchés 0, capacité 10 000 / 1 000 Mbps ; le commentaire actuel du code est faux |
-| vCPU des CVM | `numVcpus` v4 seulement s'il est confirmé par le PE ; sinon vide | Lab : `numVcpus: 1` pour 20 Gio de RAM, probablement un nombre de sockets (même piège que la v2) |
+| vCPU des CVM | v4 jamais repris ; vCPU lu par le PE en v1 (`/v1/vms?filterCriteria=is_cvm==1`) ; vide sans PE | Recette : v4 `numVcpus: 1`, v1 `numVCpus: 4` (valeur affichée par Prism) ; la v2 `/vms` exclut les CVM |
+| Adresses des hôtes v4 (bug trouvé) | IP de la CVM et de l'hyperviseur lues sous `externalAddress` | Sur pc.7.6, `controllerVm.ip` / `hypervisor.ip` n'existent pas : sans PE, le tableau des adresses sortait vide |
 | Recette | Lab PC seul puis PC + PE, comparés avec le rapport d'écarts de #16 | Prouve que seules HA et pools diffèrent |
 | Collectes antérieures | Les écarts « ajoutés » entre une collecte d'avant et une d'après ce plan sont attendus | Nouvelles clés, pas de vrais changements : documenté, pas masqué |
 | Versions d'API | Aucun changement d'apiCompat | `unversioned/info` répond 405 sur pc.7.6 (repli v4.0), mais le PC sert aussi les chemins récents (cvms, recovery-plans, licensing, email-config, KMS, SAML) sous le préfixe v4.0 — vérifié |
@@ -96,6 +97,7 @@ avec ses seuls identifiants, et le PE devient un complément facultatif.
 | Chiffrement | Champ v4 présent → v4 ; absent → v2 si PE ; sinon « Non » | La v4 omet ce qui n'est pas configuré ; sans ce repli, un cluster chiffré en transit selon la v2 sortait « Non » (vu par le test existant) |
 | Disques | v4 d'abord, v2 complète par numéro de série | L'usage d'un disque n'existe qu'en v2 |
 | Licences, lignes v1 | Omises quand la v4 a répondu et que le PE est absent | Type, numéro de série du bloc, échéance resteraient vides |
+| Chiffrement au repos | Dès que la v4 a répondu, elle seule fait foi ; `cluster_v2.encrypted` ne sert que sans v4 | Lab sans aucun chiffrement (confirmé par l'utilisateur) : v2 `encrypted: true`, v4 rien de configuré. Le faux Prism reprend cette forme |
 | Raisons d'absence | Traduites dans le document (`REASONS`) | « identifiants Prism Element non fournis » sortait en français dans le document anglais |
 
 ### Mesures sur le lab (PC 7.6, 2026-11-27, lecture seule)
@@ -154,12 +156,15 @@ $BUN test
 | 2026-11-27 | Étapes 1–6 — `bun test` | 39 tests verts | 39 pass, 0 fail (dont le nouveau « PC seul : le document se passe du Prism Element ») | ✅ |
 | 2026-11-27 | 🧪 Recette lab PC seul, .docx fr et en (script sur la collecte réelle) | Valeurs v4 présentes, raisons d'absence, aucun secret, aucun `{{` | Toutes les valeurs attendues présentes dans les deux langues ; 0 fuite ; 0 marqueur ; « non collecté » restants : cfg.ha, cfg.auth, cfg.dataprotection (attendus) et host.bios (LCM du lab sans BIOS/BMC, `bmc-info` v4.4 non servi par ce PC) | ✅ |
 | 2026-11-27 | Validé sur la spec, pas en réel | SMTP, proxy, KMS, SAML, recovery plans, serveur de management | Non configurés sur le lab : couverts par le faux Prism uniquement | ⚠️ |
-| — | 🧪 Recette lab PC + PE et rapport d'écarts (#16) ; vCPU des CVM | Voir résultat attendu 3 | **Non joué** : mot de passe du PE requis (le compte du PC est refusé sur le PE, HTTP 401) | ⏳ |
+| 2026-11-27 | 🧪 Recette lab PC + PE, 1ʳᵉ passe (comparaison section par section des deux modèles) | Écarts limités à HA, pool, auth, PD, alerting v1, vCPU CVM | En plus : `host.addresses` vide sans PE (IP CVM/hôte v4 sous `externalAddress`) ; vCPU absent même avec PE (v2 `/vms` sans CVM) ; lignes v1 vides dans les licences ; chiffrement au repos divergent | ❌ |
+| 2026-11-27 | 🧪 Recette lab PC + PE, 2ᵉ passe après correctifs | Idem | Écarts : cfg.ha, cfg.pools (nom, ILM 75), cfg.cvm (vCPU 4 avec PE), cfg.auth, cfg.dataprotection, cfg.alerts (alerting v1), annexe de collecte — et **cfg.encryption** (au repos : « Non » en v4, « Oui » selon `cluster_v2.encrypted`) ; `bun test` 39/39 ; .docx fr/en sans fuite ni marqueur | ⚠️ chiffrement à trancher |
+| 2026-11-27 | 🧪 Recette lab PC + PE, 3ᵉ passe (chiffrement : v4 seule dès qu'elle répond ; lab confirmé sans chiffrement) | Écarts limités à ce que seul le PE donne | Écarts : cfg.ha, cfg.pools, cfg.cvm, cfg.auth, cfg.dataprotection, cfg.alerts, annexe de collecte — plus de divergence sur le chiffrement ; `bun test` 39/39 ; .docx fr/en : valeurs attendues présentes, 0 fuite, 0 marqueur | ✅ |
 
 ## Journal de session
 
 ### Session 2026-11-27
 - ✅ Fait : inventaire des 20 namespaces v4 (dernière version de chacun) face aux champs v1/v2 lus aujourd'hui ; sondage du lab ; cadrage ; issue #17 et plan créés.
 - ✅ Fait : étapes 1 à 6 (un seul passage) ; bug préexistant corrigé (ports v4 jamais collectés : hôte rattaché par `cluster.uuid`) ; recette lab PC seul en fr et en.
-- 📋 Prochain : recette PC + PE (vCPU des CVM, rapport d'écarts), puis ✅ Validation.
-- 🚧 Blocages : mot de passe du Prism Element nécessaire pour la recette PC + PE (le compte admin du PC est refusé sur le PE).
+- ✅ Fait : recette PC + PE ; correctifs adresses v4 des hôtes, vCPU des CVM (v1), lignes v1 des licences.
+- ✅ Fait : chiffrement au repos tranché (lab sans chiffrement : la v4 fait foi) ; ✅ Validation — plan clôturé.
+- 📋 Hors plan, relevé : uplink bonds, affinités VM, STIG, network segments, réglages LCM (API v4 disponibles) ; BIOS/BMC quand le LCM ne les décrit pas (`bmc-info` v4.4).

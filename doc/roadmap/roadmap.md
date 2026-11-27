@@ -13,8 +13,6 @@ Backlog consolidé : plans nommés d'après leur issue GitHub (voir `doc/roadmap
 
 ## À faire
 
-- **[Issue: #17] `#17` — As-built complet depuis le seul Prism Central** 🟢 high · L — API v4 d'abord ; le Prism Element ne sert plus qu'à la HA, aux pools et aux protection domains hérités.
-  [`17-pe-optionnel-v4.md`](17-pe-optionnel-v4.md)
 - **[Issue: #15] `#15` — Sauvegarde automatique avant une mise à jour** 🟢 medium · M — La collecte et les saisies survivent au redémarrage d'une mise à jour.
   [`15-sauvegarde-avant-mise-a-jour.md`](15-sauvegarde-avant-mise-a-jour.md)
 - **[Issue: #16] `#16` — Comparaison de deux collectes** 🟢 medium · L — Rapport d'écarts .docx entre deux collectes exportées.
@@ -24,7 +22,7 @@ Backlog consolidé : plans nommés d'après leur issue GitHub (voir `doc/roadmap
 
 ## Fait
 
-### Plans livrés (2026-10-12 → 2026-11-18)
+### Plans livrés (2026-10-12 → 2026-11-27)
 - **[Issue: #1] `#1` — CI de tests et release des exécutables sur tag** (2026-10-12) 🔵 — CI de tests à chaque push ; release v0.1.0 publiée avec les cinq exécutables depuis un tag.
   [`1-ci-release.md`](done/1-ci-release.md)
 - **[Issue: #2] `#2` — Tests du serveur et du template, correctif du téléchargement** (2026-10-12) 🔵 — Jeton, routes et contrôle du template couverts par quatre nouveaux tests ; URL de téléchargement révoquée après un délai.
@@ -53,6 +51,8 @@ Backlog consolidé : plans nommés d'après leur issue GitHub (voir `doc/roadmap
   [`13-mise-a-jour-application.md`](done/13-mise-a-jour-application.md)
 - **[Issue: #14] `#14` — Pied de page : mention de licence** (2026-11-18) 🔵 — « © 2026 · Licence GPL-3.0 » avec lien vers `LICENSE`, à la place de « Tous droits réservés ».
   [`14-pied-de-page-licence.md`](done/14-pied-de-page-licence.md)
+- **[Issue: #17] `#17` — As-built complet depuis le seul Prism Central** (2026-11-27) 🔵 — Document complet avec les seuls identifiants du PC (licences et conformité, CVM, NCC, ports, pools, SMTP, proxy, chiffrement, KMS, Pulse, alertes, recovery plans, SAML) ; étape Prism Element facultative avec bouton Passer, réservée à la HA, au nom et seuil ILM des pools, aux protection domains, à l'authentification du cluster et au vCPU des CVM ; ports v4 et adresses d'hôtes v4 corrigés ; lab pc.7.6 validé avec et sans PE.
+  [`17-pe-optionnel-v4.md`](done/17-pe-optionnel-v4.md)
 
 ---
 

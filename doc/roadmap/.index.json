@@ -145,11 +145,11 @@
   },
   {
     "id": "17",
-    "status": "active",
+    "status": "done",
     "priority": "high",
     "complexity": "L",
     "title": "[🔌] Plan #17 - As-built complet depuis le seul Prism Central",
     "deps": [],
-    "path": "17-pe-optionnel-v4.md"
+    "path": "done/17-pe-optionnel-v4.md"
   }
 ]
