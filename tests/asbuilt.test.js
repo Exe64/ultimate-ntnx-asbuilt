@@ -222,7 +222,7 @@ test('PC seul : le document se passe du Prism Element', async () => {
     ]);
     expect(allCells('pc.iscsi')).toEqual([['iqn.1991-05.com.microsoft:sql01', 'Gondor', 'CHAP', 2]]);
     expect(allCells('sec.stig')).toEqual([['Gondor', 'STIG', 120, 3, 10]]);
-    expect(allCells('sec.stigfailed')).toEqual([['V-1', 'SSH root login', 'HIGH']]);
+    expect(allCells('sec.stigfailed')).toEqual([['V-1', 'SSH root login', 'HIGH', 'Non conforme']]);
     // Sans VPC, Flow VN n'est pas interrogé et se dit « Non configuré ».
     expect(prism.seen.some(p => p.endsWith('/config/gateways'))).toBe(false);
     expect(every.find(x => x.id === 'pc.fvn').emptyText).toBe('Non configuré');

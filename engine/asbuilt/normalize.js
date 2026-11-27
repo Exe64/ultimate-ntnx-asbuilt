@@ -450,9 +450,10 @@ export function normalizeCluster(entry, plan = {}) {
     name: b.name || null, node: nodeName.get(b.hostReference) || b.hostReference || null,
     vswitch: b.virtualSwitchInfo?.name || null, type: b.type || null, lacp: b.lacpStatus || null,
     nics: (b.hostNicReferences || []).map(r => {
-      const nic = nicById.get(r.extId);
+      const id = r?.extId ?? r; // pc.7.6 : chaînes d'extId, la spec dit HostNicReference
+      const nic = nicById.get(id);
       const speed = speedLabel(nic?.linkSpeedInKbps);
-      return nic ? (speed ? `${nic.name} (${speed})` : nic.name) : r.extId;
+      return nic ? (speed ? `${nic.name} (${speed})` : nic.name) : id;
     }),
   }));
 

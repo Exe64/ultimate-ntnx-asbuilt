@@ -105,7 +105,7 @@ export function startFakePrism({ hosts = 1, flowEnabled = true, vpcs = false } =
       if (pathname.endsWith('/authn/saml-identity-providers')) return Response.json({ data: [{ name: 'adfs', idpMetadataUrl: 'https://adfs.gondor.local/metadata' }] });
       // Plan #18 : formes de la spec (networking, vmm, iam, lifecycle, clustermgmt, prism).
       if (pathname.endsWith('/config/uplink-bonds')) return Response.json({ data: [
-        { name: 'br0-up', type: 'BALANCE_TCP', lacpStatus: 'NEGOTIATED', clusterReference: 'c-1', hostReference: 'h-1', hostNicReferences: [{ extId: 'nic-1' }], virtualSwitchInfo: { name: 'vs0' } },
+        { name: 'br0-up', type: 'BALANCE_TCP', lacpStatus: 'NEGOTIATED', clusterReference: 'c-1', hostReference: 'h-1', hostNicReferences: ['nic-1'], virtualSwitchInfo: { name: 'vs0' } },
       ] });
       if (pathname.endsWith('/config/categories')) return Response.json({ data: [
         { extId: 'cat-sql', key: 'App', value: 'SQL' }, { extId: 'cat-dc', key: 'App', value: 'AD' }, { extId: 'cat-h', key: 'Hosts', value: 'Fast' },
@@ -151,11 +151,12 @@ export function startFakePrism({ hosts = 1, flowEnabled = true, vpcs = false } =
         { title: 'CPU VM > 90 %', isEnabled: true, entityType: 'vm', impactTypes: ['PERFORMANCE'], triggerConditions: [{ big: 'x' }] },
       ] });
       if (pathname.endsWith('/report/stigs')) return Response.json({ data: [
-        { title: 'SSH root login', ruleId: 'V-1', severity: 'HIGH', status: 'FAILED', fixText: 'k-longtext' },
-        { title: 'Banner', ruleId: 'V-2', severity: 'LOW', status: 'PASSED' },
+        { title: 'SSH root login', ruleId: 'V-1', severity: 'HIGH', status: 'APPLICABLE', fixText: 'k-longtext' },
+        { title: 'Banner', ruleId: 'V-2', severity: 'LOW', status: 'NOT_APPLICABLE' },
       ] });
       if (pathname.endsWith('/report/security-summaries')) return Response.json({ data: [
         { clusterExtId: 'c-1', stigSummary: { passedCount: 120, failedCount: 3, notApplicableCount: 10 }, lastRefreshTime: '2026-11-27T00:00:00Z' },
+        { clusterExtId: 'pc-1', lastRefreshTime: '2026-11-27T00:00:00Z' },
       ] });
       if (pathname.endsWith('/config/security-profiles')) return Response.json({ data: [{ clusterExtId: 'c-1', type: 'STIG' }] });
       if (pathname.endsWith('/content/templates')) return Response.json({ data: [{ templateName: 'tpl-win2022', templateDescription: 'Windows Server 2022' }] });

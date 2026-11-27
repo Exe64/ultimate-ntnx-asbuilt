@@ -747,7 +747,7 @@ const SEC_SECTIONS = [
     title: { fr: 'Conformité STIG', en: 'STIG Compliance' },
     keys: ['v4_security_summaries', 'v4_security_profiles'],
     build: (ctx) => {
-      const sums = ctx.pc.list('v4_security_summaries');
+      const sums = ctx.pc.list('v4_security_summaries').filter(x => x.stigSummary); // le PC a une ligne sans compteurs
       if (!sums.length) return null;
       const names = new Map(ctx.pc.list('v4_clusters').map(c => [c.extId, c.name]));
       const profiles = ctx.pc.list('v4_security_profiles');
@@ -768,11 +768,12 @@ const SEC_SECTIONS = [
     title: { fr: 'Contrôles STIG non conformes', en: 'Failed STIG Controls' },
     keys: ['v4_stigs'],
     build: (ctx) => {
-      const failed = ctx.pc.list('v4_stigs').filter(x => /fail/i.test(String(x.status ?? '')));
+      // Spec : APPLICABLE = un cluster échoue le contrôle ; pc.7.6 ne renvoie que ceux-là et les NEEDS_REVIEW.
+      const failed = ctx.pc.list('v4_stigs').filter(x => ['APPLICABLE', 'NEEDS_REVIEW'].includes(x.status));
       if (!failed.length) return null;
       return {
-        columns: [{ fr: 'Règle', en: 'Rule' }, { fr: 'Contrôle', en: 'Control' }, { fr: 'Sévérité', en: 'Severity' }],
-        rows: failed.map(x => ctx.row([x.ruleId, x.title, ctx.f.label(x.severity)], 'api')),
+        columns: [{ fr: 'Règle', en: 'Rule' }, { fr: 'Contrôle', en: 'Control' }, { fr: 'Sévérité', en: 'Severity' }, { fr: 'État', en: 'Status' }],
+        rows: failed.map(x => ctx.row([x.ruleId, x.title, ctx.f.label(x.severity), ctx.f.label(x.status)], 'api')),
       };
     },
   },

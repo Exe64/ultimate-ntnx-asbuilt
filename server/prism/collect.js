@@ -123,7 +123,8 @@ const PE_ENDPOINTS = [
     softwareEncryptionScope: d?.softwareEncryptionScope ?? null, desiredPasswordProtection: d?.desiredPasswordProtection ?? null,
     PCKeyManagerStatus: d?.PCKeyManagerStatus ?? null, storageContainerEncryptionStatus: d?.storageContainerEncryptionStatus ?? null,
     diskEncryptionStatus: d?.diskEncryptionStatus ?? null }) }],
-  ['metro_witness_v1',       'prism.v1', '/cluster/metro_witness', { pick: (d) => ({ entities: (Array.isArray(d) ? d : d?.entities || []).map(w => ({
+  // Sans Metro, AOS 7.6 répond 500 « features that are not enabled » : c'est « non configuré », pas une erreur.
+  ['metro_witness_v1',       'prism.v1', '/cluster/metro_witness', { absentMessage: /not enabled or available/i, pick: (d) => ({ entities: (Array.isArray(d) ? d : d?.entities || []).map(w => ({
     witnessName: w.witnessName, clusterName: w.clusterName, ipAddresses: w.ipAddresses, nosFullVersion: w.nosFullVersion || w.nosVersion, markedForRemoval: w.markedForRemoval })) }) }],
   ['remote_support_v1',      'prism.v1', '/cluster/remote_support', { pick: (d) => ({
     enabled: d?.enable?.enabled ?? null, duration: d?.enable?.duration ?? null, connectionStatus: d?.tunnelDetails?.connectionStatus?.status ?? d?.tunnelDetails?.connectionStatus ?? null }) }],
@@ -340,7 +341,8 @@ async function collectPe(peClient) {
   const out = await gather(PE_ENDPOINTS.map(([key, api, path, opts = {}]) => ({
     key,
     run: async () => {
-      const r = await peClient.get(await compat.url(peClient, api, path), opts.params ? { params: opts.params } : undefined);
+      const r = await peClient.get(await compat.url(peClient, api, path), opts.params ? { params: opts.params } : undefined)
+        .catch((err) => { if (opts.absentMessage?.test(errorOf(err).message)) return { data: [] }; throw err; });
       // Les endpoints de liste v2 répondent {entities:[…]} : on garde la forme telle quelle,
       // c'est celle que le snapshot d'audit produit et que le modèle sait lire.
       return opts.pick ? opts.pick(r.data) : r.data;
