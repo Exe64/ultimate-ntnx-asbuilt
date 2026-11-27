@@ -151,5 +151,25 @@
     "title": "[🔌] Plan #17 - As-built complet depuis le seul Prism Central",
     "deps": [],
     "path": "done/17-pe-optionnel-v4.md"
+  },
+  {
+    "id": "18",
+    "status": "active",
+    "priority": "medium",
+    "complexity": "L",
+    "title": "[🧩] Plan #18 - As-built enrichi : réseau, placement des VM, matériel, accès",
+    "deps": [],
+    "path": "18-asbuilt-enrichi-v4.md"
+  },
+  {
+    "id": "19",
+    "status": "active",
+    "priority": "low",
+    "complexity": "M",
+    "title": "[🗂️] Plan #19 - Sections de contexte et compléments Prism Element v1",
+    "deps": [
+      "18"
+    ],
+    "path": "19-sections-contexte-pe-v1.md"
   }
 ]

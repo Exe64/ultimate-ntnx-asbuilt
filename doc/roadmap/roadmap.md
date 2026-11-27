@@ -13,6 +13,10 @@ Backlog consolidé : plans nommés d'après leur issue GitHub (voir `doc/roadmap
 
 ## À faire
 
+- **[Issue: #18] `#18` — As-built enrichi : réseau, placement des VM, matériel, accès** 🟢 medium · L — Bonds, segmentation, affinités et démarrage des VM, blocs, résilience du stockage, BIOS/BMC, droits d'accès, sauvegarde du PC, LCM.
+  [`18-asbuilt-enrichi-v4.md`](18-asbuilt-enrichi-v4.md)
+- **[Issue: #19] `#19` — Sections de contexte et compléments Prism Element v1** 🟢 low · M — Chiffrement réel, Witness, support à distance, VM non protégées ; STIG, Flow VN, catalogue, iSCSI (décochés par défaut). Après #18.
+  [`19-sections-contexte-pe-v1.md`](19-sections-contexte-pe-v1.md)
 - **[Issue: #15] `#15` — Sauvegarde automatique avant une mise à jour** 🟢 medium · M — La collecte et les saisies survivent au redémarrage d'une mise à jour.
   [`15-sauvegarde-avant-mise-a-jour.md`](15-sauvegarde-avant-mise-a-jour.md)
 - **[Issue: #16] `#16` — Comparaison de deux collectes** 🟢 medium · L — Rapport d'écarts .docx entre deux collectes exportées.
