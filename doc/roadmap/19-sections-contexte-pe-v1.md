@@ -48,10 +48,10 @@ depuis #6.
 
 ## Étapes
 
-- [ ] Étape 1 — Collecte PE v1 : chiffrement au repos, Witness, support à distance, VM non protégées (S · standard → Sonnet)
-- [ ] Étape 2 — Collecte PC : politiques de stockage, alertes personnalisées, STIG / security summaries / security profiles, Flow VN (seulement si des VPC existent), catalogue, iSCSI (M · standard → Sonnet)
-- [ ] Étape 3 — Sections : chiffrement réel (ligne « Données au repos »), Witness, support à distance, VM non protégées, politiques de stockage, alertes personnalisées, conformité sécurité, Flow VN, catalogue, iSCSI ; contexte décoché par défaut (M · standard → Sonnet)
-- [ ] Étape 4 — Faux Prism, tests et documentation (M · standard → Sonnet)
+- [x] Étape 1 — Collecte PE v1 : chiffrement au repos, Witness, support à distance, VM non protégées (S · standard → Sonnet)
+- [x] Étape 2 — Collecte PC : politiques de stockage, alertes personnalisées, STIG / security summaries / security profiles, Flow VN (seulement si des VPC existent), catalogue, iSCSI (M · standard → Sonnet)
+- [x] Étape 3 — Sections : chiffrement réel (ligne « Données au repos »), Witness, support à distance, VM non protégées, politiques de stockage, alertes personnalisées, conformité sécurité, Flow VN, catalogue, iSCSI ; contexte décoché par défaut (M · standard → Sonnet)
+- [x] Étape 4 — Faux Prism, tests et documentation (M · standard → Sonnet)
 - [ ] 🧪 Tests — `bun test`, recette lab PC seul et PC + PE
 - [ ] ✅ Validation — Vérifier les résultats des tests et clôturer
 
@@ -62,7 +62,13 @@ depuis #6.
 | Chiffrement au repos | Avec PE : `/v1/data_at_rest_encryption` l'emporte sur la v4 ; sans PE : règle de #17 (v4 seule) | Seule exception à « v4 d'abord » : la v1 donne l'état réel |
 | Activation par défaut | Sections de contexte décochées ; Witness et chiffrement réel activés | Le Witness fait partie de l'architecture dès qu'il existe ; le chiffrement remplace une ligne existante |
 | Flow VN | Appels seulement si des VPC existent | Évite des appels inutiles sur un PC sans FVN |
-| Recette | Faux Prism puis lab ; le non configuré est marqué « validé sur la spec » | Lab un nœud, sans VPC ni Witness |
+| Recette | Faux Prism puis lab, en une recette commune avec #18 ; le non configuré est marqué « validé sur la spec » | Lab un nœud, sans VPC ni Witness ; identifiants donnés une fois |
+| Séquencement | #19 implémenté avant la recette de #18 (entorse validée par l'utilisateur) | #18 commité et poussé ; #19 n'ajoute que des clés |
+| Champs choisis à la collecte | `pick` sur chaque appel v1 du PE et sur les objets PC de contexte | Witness (`username`/`password`), proxy du tunnel de support, IPsec des VPN, `clientSecret` iSCSI, mot de passe BGP, textes de correction STIG, VM (dizaines de champs) |
+| Tables de routage | Non lues | Les routes demandent un appel par table ; peu d'information pour un as-built |
+| Flow VN sans VPC | Clés FVN posées vides | La section dit « Non configuré » au lieu de « Non collecté » |
+| STIG | Deux sections : synthèse par cluster (`security-summaries` + profils) et contrôles non conformes (`stigs`) | Le détail de tous les contrôles noierait le document |
+| Flow VN | Une seule section, colonne « Type » | Plus compact qu'une section par type d'objet |
 
 ## Tests
 
@@ -89,4 +95,5 @@ depuis #6.
 
 ### Session 2026-11-27
 - ✅ Fait : cadrage commun avec #18 ; issue #19 et plan créés.
-- 📋 Prochain : attendre la clôture de #18, puis étape 1.
+- ✅ Fait : étapes 1 à 4 (une seule passe) ; 40 tests verts (dont « Flow Virtual Networking : interrogé seulement avec des VPC, sans secret »).
+- 📋 Prochain : recette commune #18 + #19 sur le lab (identifiants PC et PE à redonner).
