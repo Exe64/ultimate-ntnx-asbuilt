@@ -117,11 +117,14 @@ test('collecte sur un Prism auto-signé → bundle → .docx', async () => {
     expect(cells('cfg.proxy')).toEqual([['proxy', '10.0.0.8', 3128, 'HTTP, HTTPS', 'svc']]);
     expect(kv('cfg.certificate')).toMatchObject({ Sujet: 'CN=localhost', 'Émetteur': 'CN=localhost', 'Algorithme de clé': 'RSA_2048' });
     expect(kv('cfg.certificate')["Valide jusqu'au"]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    // En transit : champ absent en v4, la v2 du PE fait foi. KMS lus sur le PC (plan #17).
+    // Au repos : la v4 fait foi, malgré `encrypted: true` en v2. En transit : champ absent en v4, la
+    // v2 du PE fait foi. KMS lus sur le PC (plan #17).
     expect(kv('cfg.encryption')).toEqual({ 'Données au repos': 'Non', 'Disques auto-chiffrants': 'Non', 'Containers chiffrés (logiciel)': 'Aucun', 'Données en transit': 'Oui', 'Serveurs de clés (KMS)': 'kms-gondor' });
     // Ports : la v4 (25G) l'emporte sur la v2 (10G) ; le pool garde le nom que lui donne le PE.
     expect(normalizeCluster(bundle.clusters[0]).nodePorts[0].ports).toEqual([{ name: 'eth0', speed: '25G', active: true }]);
     expect(cells('cfg.pools')).toEqual([['default-storage-pool', 'sp-1', '2.00 To', null]]);
+    // CVM : mémoire v4, vCPU de la v1 du PE (la v4 annonce 1, faux).
+    expect(cells('cfg.cvm')[0].slice(0, 3)).toEqual(['gondor-1-CVM', '32.00 Go', 8]);
     expect(cells('pc.images')).toEqual([['ubuntu-24.04', 'DISK_IMAGE', '4.00 Go', 'Gondor']]);
     expect(cells('pc.flow')).toEqual([['web-app', 'APPLICATION', 'ENFORCE', null]]);
     expect(cells('pc.files')).toEqual([['files01', null, null]]);
@@ -173,6 +176,8 @@ test('PC seul : le document se passe du Prism Element', async () => {
     expect(view.nccVersion).toBe('5.1.0');
     expect(view.nodePorts[0].ports).toEqual([{ name: 'eth0', speed: '25G', active: true }]);
     expect(view.nodes[0].storageTb).toBe(1);
+    expect([view.nodes[0].cvmIp, view.nodes[0].hostIp]).toEqual(['10.0.0.21', '10.0.0.11']);
+    expect(cells('cfg.cvm')[0][2]).toBeNull();
 
     // Ce que seul le PE expose dit pourquoi il manque, au lieu de passer pour « Non configuré ».
     for (const id of ['cfg.ha', 'cfg.auth', 'cfg.dataprotection']) {

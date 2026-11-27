@@ -42,7 +42,9 @@ export function startFakePrism({ hosts = 1, flowEnabled = true } = {}) {
       }
       if (pathname.endsWith('/config/hosts')) return Response.json({
         // Un hôte v4 désigne son cluster par `cluster.uuid` sur pc.7.6 (et non `cluster.extId`).
-        data: names.map(([extId, hostName]) => ({ extId, hostName, cluster: { uuid: 'c-1' } })),
+        // Adresses sous `externalAddress` (forme pc.7.6).
+        data: names.map(([extId, hostName], i) => ({ extId, hostName, cluster: { uuid: 'c-1' },
+          controllerVm: { externalAddress: { ipv4: { value: `10.0.0.${21 + i}` } } }, hypervisor: { externalAddress: { ipv4: { value: `10.0.0.${11 + i}` } } } })),
       });
       if (pathname.endsWith('/config/domain-managers')) return Response.json({ data: [{ extId: 'dm-1', hostingClusterExtId: 'c-1',
         config: { credentials: [{ username: 'admin', password: 'k-pcpass' }], name: 'PC', size: 'SMALL', buildInfo: { version: 'pc.7.5' }, resourceConfig: { numVcpus: 6, memorySizeBytes: 26 * 2 ** 30, dataDiskSizeBytes: 500 * 2 ** 30 } },
@@ -101,9 +103,11 @@ export function startFakePrism({ hosts = 1, flowEnabled = true } = {}) {
       if (pathname.endsWith('/authn/saml-identity-providers')) return Response.json({ data: [{ name: 'adfs', idpMetadataUrl: 'https://adfs.gondor.local/metadata' }] });
       if (pathname.endsWith('/config/protection-policies')) return Response.json({ data: [{ name: 'Gold' }] });
       if (pathname.endsWith('/v1/storage_pools')) return Response.json({ entities: [{ name: 'default-storage-pool', storagePoolUuid: 'sp-1', capacity: 2 ** 41 }] });
+      if (pathname.endsWith('/v1/vms')) return Response.json({ entities: [{ vmName: 'gondor-1-CVM', controllerVm: true, numVCpus: 8 }] });
       if (pathname.endsWith('/v1/snmp')) return Response.json({ enabled: true, snmpUsers: [{ username: 'peuser', authType: 'SHA', authKey: 'k-peauth', privType: 'AES', privKey: 'k-pepriv' }] });
       if (pathname.endsWith('/v2.0/cluster/')) return Response.json({ name: 'Gondor', version: '7.0', timezone: 'Europe/Paris',
-        encrypted: false, has_self_encrypting_drive: false, data_in_transit_encryption_dto: { enabled: true },
+        // `encrypted: true` sans aucun chiffrement configuré : la forme vue sur AOS 7.6 (lab).
+        encrypted: true, has_self_encrypting_drive: false, data_in_transit_encryption_dto: { enabled: true },
         http_proxies: [{ name: 'proxy', address: '10.0.0.8', port: 3128, proxy_types: ['HTTP', 'HTTPS'], username: 'svc', password: 'k-proxy' }] });
       if (pathname.endsWith('/v2.0/hosts/')) return Response.json({
         entities: names.map(([uuid, name], i) => ({ uuid, name, serial: `SN-${42 + i}` })),

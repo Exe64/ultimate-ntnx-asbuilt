@@ -964,8 +964,10 @@ const CFG_SECTIONS = [
       const en = ctx.lang === 'en';
       const rights = (ent?.details || []).map(d => [d.name || ctx.f.label(d.category), d.earliestExpiryDate && `${en ? 'expires' : 'échéance'} ${d.earliestExpiryDate}`].filter(Boolean).join(', '));
       const compliance = services.map(sv => `${sv.name} : ${ctx.f.label(sv.licenseType)}, ${sv.isCompliant ? (en ? 'compliant' : 'conforme') : (en ? 'not compliant' : 'non conforme')}`);
-      // Lignes propres à la v1 : vides sans PE dès que la v4 a répondu, donc omises dans ce cas.
-      const v1Rows = (rows) => (ctx.cluster.one('license_v1') || !(ent || services.length) ? rows : []);
+      // Lignes propres à la v1 : omises quand la v4 a répondu et que la v1 n'a rien à y mettre (PE
+      // absent, ou licence v1 sans ces champs — vu sur pc.7.6 / AOS 7.6).
+      const v1Has = [lic.licenseType, lic.type, lic.blockSerial, lic.expiryDate, lic.expiration].some(v => v != null);
+      const v1Rows = (rows) => (v1Has || !(ent || services.length) ? rows : []);
       const violations = services.flatMap(sv => (sv.violations || []).map(v => `${ctx.f.label(v.type)}${v.startDate ? ` (${en ? 'since' : 'depuis le'} ${v.startDate})` : ''}`));
       return {
         rows: [
@@ -1094,9 +1096,9 @@ const CFG_SECTIONS = [
   {
     id: 'cfg.cvm', chapter: 'cfg', kind: 'table',
     title: { fr: 'Configuration des CVMs', en: 'Controller VM Settings' },
-    keys: ['v4_cvms', 'v4_hosts', 'hosts_v2', 'vms_v2'],
+    keys: ['v4_cvms', 'cvms_v1', 'v4_hosts', 'hosts_v2', 'vms_v2'],
     // La mémoire d'une CVM se lit dans clustermgmt v4 (`/clusters/{id}/cvms`). Son vCPU, non : le
-    // `numVcpus` v4 n'est pas fiable (cf. normalize.js), il vient du Prism Element quand il est
+    // `numVcpus` v4 n'est pas fiable (cf. normalize.js), il vient du Prism Element (v1) quand il est
     // fourni. Ce que l'API ne rend pas, la saisie du Build le complète, sans quoi la colonne
     // resterait vide sur la majorité des clusters.
     build: (ctx) => ({
@@ -1209,13 +1211,15 @@ const CFG_SECTIONS = [
     keys: ['v4_clusters', 'v4_disks', 'v4_key_management_servers', 'cluster_v2'],
     build: (ctx) => {
       // v4 d'abord, quand le champ est présent ; sinon la v2 du PE ; sinon « non activé » (la v4 omet
-      // ce qui n'est pas configuré, vu sur pc.7.6).
+      // ce qui n'est pas configuré, vu sur pc.7.6). Exception, le chiffrement au repos : dès que la v4
+      // a répondu, elle seule fait foi — `cluster_v2.encrypted` vaut true sur un cluster sans aucun
+      // chiffrement (AOS 7.6, confirmé sur le lab) ; il ne sert plus que sans v4.
       const cfg = ctx.cluster.list('v4_clusters')[0]?.config;
       const v2 = ctx.cluster.one('cluster_v2');
       const cl = v2 || {};
       if (!cfg && !v2) return null;
       const options = [].concat(cfg?.encryptionOption || []);
-      const atRest = options.length ? options.map(o => ctx.f.label(o)).join(', ') : ctx.f.bool(v2 ? cl.encrypted : false);
+      const atRest = options.length ? options.map(o => ctx.f.label(o)).join(', ') : ctx.f.bool(!cfg && !!cl.encrypted);
       const disks = ctx.cluster.list('v4_disks');
       const sed = disks.some(d => d.diskAdvanceConfig?.isSelfEncryptingDrive != null)
         ? disks.some(d => d.diskAdvanceConfig?.isSelfEncryptingDrive === true) : !!cl.has_self_encrypting_drive;

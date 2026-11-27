@@ -37,7 +37,7 @@ const PE_KEYS = [
   'vms_v2', 'networks_v2', 'ha_v2', 'protection_domains_v2', 'pd_status_v2',
   'remote_sites_v2', 'license_v1', 'license_allowances_v1', 'authconfig_v1',
   'auth_types_v1', 'auth_directories_v1', 'snmp_v1', 'alerts_config_v1', 'pulse_v1',
-  'cluster_params_v1',
+  'cluster_params_v1', 'cvms_v1',
 ];
 
 // Où lire la référence de cluster, clé par clé. Les noms de champs diffèrent d'un namespace v4

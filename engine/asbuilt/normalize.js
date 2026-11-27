@@ -37,8 +37,9 @@ function nodeFromV4(h) {
   return {
     uuid: h.extId || null,
     name: h.hostName || h.name,
-    cvmIp: addr(h.controllerVm?.ip) || addr(h.controllerVm?.ipv4),
-    hostIp: addr(h.hypervisor?.ip) || addr(h.hostIp),
+    // pc.7.6 rend ces adresses sous `externalAddress` ; `ip` reste lu pour les versions antérieures.
+    cvmIp: addr(h.controllerVm?.externalAddress) || addr(h.controllerVm?.ip) || addr(h.controllerVm?.ipv4),
+    hostIp: addr(h.hypervisor?.externalAddress) || addr(h.hypervisor?.ip) || addr(h.hostIp),
     ipmiIp: addr(h.ipmi?.ip),
     model: h.rackableUnitModel || h.blockModel || null,
     serial: h.blockSerial || h.serialNumber || null,
@@ -405,17 +406,19 @@ export function normalizeCluster(entry, plan = {}) {
   const vmsV2 = list('vms_v2').map(v => vmFromV2(v, netNames));
   const vms = vmsV2.length ? vmsV2 : list('v4_vms').map(vmFromV4);
 
-  // CVM : d'abord clustermgmt v4 (`/cvms`), complété par les VM contrôleur vues en v2, sinon ce que
-  // les hôtes déclarent. Le `numVcpus` v4 n'est pas repris : sur pc.7.6 il vaut 1 pour une CVM de
-  // 20 Gio, ce qui ressemble à un nombre de sockets (le piège déjà connu en v2) — le vCPU vient du PE.
+  // CVM : d'abord clustermgmt v4 (`/cvms`), complété par le PE, sinon ce que les hôtes déclarent.
+  // Le `numVcpus` v4 n'est pas repris : sur pc.7.6 il vaut 1 pour une CVM que la v1 du PE (et Prism)
+  // donne à 4 vCPU. Le vCPU vient donc du PE (v1 `/vms` filtré sur les CVM, ou v2 quand elle les rend).
   const cvmsFromVms = vmsV2.filter(v => v.isCvm).map(v => ({
     name: v.name, memoryGb: v.memoryGb, vcpu: v.vcpu, ip: v.ips[0] || null, fromApi: true,
   }));
+  const cvmsV1 = list('cvms_v1');
   const cvmsV4 = list('v4_cvms').map(c => {
     const v2cvm = cvmsFromVms.find(x => x.name === c.name);
+    const v1cvm = cvmsV1.find(x => x.vmName === c.name);
     return {
       name: c.name || null, memoryGb: gbOf(c.memorySizeBytes) ?? v2cvm?.memoryGb ?? null,
-      vcpu: v2cvm?.vcpu ?? null, ip: addr(c.ipAddress) || v2cvm?.ip || null, fromApi: true,
+      vcpu: v1cvm?.numVCpus ?? v2cvm?.vcpu ?? null, ip: addr(c.ipAddress) || v2cvm?.ip || null, fromApi: true,
     };
   });
   const cvms = cvmsV4.length ? cvmsV4 : cvmsFromVms.length ? cvmsFromVms : nodes

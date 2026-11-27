@@ -80,6 +80,9 @@ const PE_ENDPOINTS = [
   ['snmp_v1',                'prism.v1', '/snmp'],
   ['alerts_config_v1',       'prism.v1', '/alerts/configuration'],
   ['pulse_v1',               'prism.v1', '/pulse'],
+  // vCPU des CVM : ni la v2 (/vms exclut les CVM) ni la v4 (`numVcpus` vaut 1 pour 4 vCPU sur
+  // pc.7.6) ne le donnent juste ; la v1 filtrée sur les CVM, oui.
+  ['cvms_v1',                'prism.v1', '/vms',                  { list: true, params: { filterCriteria: 'is_cvm==1' } }],
 ];
 
 const errorOf = (err) => ({
