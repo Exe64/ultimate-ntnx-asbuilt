@@ -370,6 +370,18 @@ export function normalizeCluster(entry, plan = {}) {
     bmcVersion: n.bmcVersion || lcmVersion(n.uuid, /^bmc/i),
   });
 
+  // Blocs (rackable units, plan #18) : modèle, série et rack ; ils complètent le modèle et la série d'un
+  // nœud quand l'hôte ne les donne pas.
+  const nodeName = new Map(nodes.filter(n => n.uuid).map(n => [n.uuid, n.name]));
+  const blocks = list('v4_rackable_units').map(u => ({
+    serial: u.serial || null, model: u.modelName || u.model || null, rack: u.rack?.id ?? null,
+    nodes: (u.nodes || []).map(x => ({ name: nodeName.get(x.uuid) || x.uuid || null, position: x.position ?? null })),
+  }));
+  nodes = nodes.map(n => {
+    const b = blocks.find(u => u.nodes.some(x => x.name === n.name));
+    return b ? { ...n, model: n.model || b.model, serial: n.serial || b.serial } : n;
+  });
+
   // Disques : v4 d'abord, la v2 complète par numéro de série (l'usage n'existe qu'en v2).
   const disksV2 = list('disks_v2').map(diskFromV2);
   const disks = list('v4_disks').length
@@ -432,6 +444,18 @@ export function normalizeCluster(entry, plan = {}) {
     : null;
   const nodePorts = nodePortsFrom(list('v4_host_nics'), list('host_nics_v2'), nodes);
 
+  // Bonds (plan #18) : une ligne par bond et par hôte, NICs résolues par leur extId v4 (nom et vitesse).
+  const nicById = new Map(list('v4_host_nics').filter(n => n.extId).map(n => [n.extId, n]));
+  const bonds = list('v4_uplink_bonds').map(b => ({
+    name: b.name || null, node: nodeName.get(b.hostReference) || b.hostReference || null,
+    vswitch: b.virtualSwitchInfo?.name || null, type: b.type || null, lacp: b.lacpStatus || null,
+    nics: (b.hostNicReferences || []).map(r => {
+      const nic = nicById.get(r.extId);
+      const speed = speedLabel(nic?.linkSpeedInKbps);
+      return nic ? (speed ? `${nic.name} (${speed})` : nic.name) : r.extId;
+    }),
+  }));
+
   const rfV4 = cfg.redundancyFactor
     ?? (cfg.faultToleranceState?.currentMaxFaultTolerance != null
       ? cfg.faultToleranceState.currentMaxFaultTolerance + 1 : null);
@@ -454,7 +478,7 @@ export function normalizeCluster(entry, plan = {}) {
     blockModel: nodes.find(n => n.model)?.model || null,
     nodeCount: nodes.length || v4?.nodes?.numberOfNodes || v2?.num_nodes || null,
     cpuCores, memoryGb, storageTb,
-    nodes, cvms, containers, disks, networks, vms, firmware, storagePools,
+    nodes, cvms, containers, disks, networks, vms, firmware, storagePools, blocks, bonds,
     vswitches: vswitchesFrom(list('v4_virtual_switches'), entry.extId || v4?.extId || v2?.uuid || null, nodes, nodePorts),
     nodePorts,
     managementServers: managementServers(net.managementServer, v2),
