@@ -41,16 +41,18 @@ export async function collectPcBundle({ pcHost, pcUser, pcPass, ignoreSSL = true
   // (adresse, identifiants, certificat) — on le dit au lieu de générer un document vide.
   if (!out.collectors.ok) throw new Error(`Prism Central ${failure(out)}`);
 
-  // Ports physiques en v4, hôte par hôte : le Prism Element n'en donne que le nom et la vitesse du
-  // lien quand il est monté ; v4 y ajoute la description du contrôleur, l'état et la capacité.
-  const hosts = asList(out.data.v4_hosts).filter(h => h.extId && (h.cluster?.extId || h.clusterExtId));
+  // Ports physiques en v4, hôte par hôte : vitesse négociée (`linkSpeedInKbps`), capacité, état et
+  // description du contrôleur. Un hôte v4 désigne son cluster par `cluster.uuid` sur pc.7.6, pas par
+  // `cluster.extId` : sans ce repli, aucun hôte ne passait le filtre et la v4 n'était jamais lue.
+  const clusterOfHost = (h) => h.cluster?.extId || h.clusterExtId || h.cluster?.uuid;
+  const hosts = asList(out.data.v4_hosts).filter(h => h.extId && clusterOfHost(h));
   if (hosts.length) {
     out.collectors.total += 1;
     let lastError = null;
     const nics = (await mapLimit(hosts, HOST_CONCURRENCY, async (h) => {
       try {
-        const list = await listAll(pc, 'prism.v4/clustermgmt', { suffix: `/config/clusters/${h.cluster?.extId || h.clusterExtId}/hosts/${h.extId}/host-nics` });
-        return list.map(n => ({ ...n, _host_uuid: h.extId, _host_name: h.hostName || h.name }));
+        const list = await listAll(pc, 'prism.v4/clustermgmt', { suffix: `/config/clusters/${clusterOfHost(h)}/hosts/${h.extId}/host-nics` });
+        return list.map(n => ({ ...n, _host_uuid: h.extId, _host_name: h.hostName || h.name, clusterExtId: clusterOfHost(h) }));
       } catch (err) { lastError = err; return []; }
     })).flat();
     if (nics.length) { out.data.v4_host_nics = { data: nics }; out.collectors.ok += 1; }

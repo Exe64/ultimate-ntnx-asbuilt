@@ -47,6 +47,16 @@ const PC_ENDPOINTS = [
   ['v4_file_servers',        'files',          '/config/file-servers',       { absentOk: true }],
   ['v4_object_stores',       'objects',        '/config/object-stores',      { absentOk: true }],
   ['v4_volume_groups',       'volumes',        '/config/volume-groups'],
+  // Ce qui demandait jusqu'ici les identifiants du Prism Element. Le PC sert aussi ces chemins sous
+  // le préfixe v4.0 (vérifié sur pc.7.6) : la mineure par défaut d'apiCompat suffit.
+  // Licences : une entrée par cluster, d'extId celui du cluster.
+  ['v4_license_entitlements', 'licensing',     '/config/entitlements'],
+  ['v4_license_compliances', 'licensing',      '/config/compliances'],
+  ['v4_recovery_plans',      'datapolicies',   '/config/recovery-plans'],
+  ['v4_key_management_servers', 'security',    '/config/key-management-servers'],
+  ['v4_saml_identity_providers', 'iam',        '/authn/saml-identity-providers'],
+  // La configuration e-mail des alertes est celle du PC, et un objet, pas une liste : pas de pagination.
+  ['v4_alert_email_config',  'monitoring',     '/serviceability/alerts/email-config', { single: true }],
 ];
 
 // ─── Prism Element (v2 / v1) ──────────────────────────────────────────────────
@@ -132,7 +142,13 @@ async function collectPc(client) {
   const out = await gather(PC_ENDPOINTS.map(([key, ns, path, opts = {}]) => ({
     key,
     run: async () => {
-      try { return { data: await listAll(client, `prism.v4/${ns}`, { suffix: path, pageSize: 100 }) }; }
+      try {
+        if (opts.single) {
+          const r = await client.get(await compat.url(client, `prism.v4/${ns}`, path, { api: 'prism.v4' }));
+          return { data: r.data?.data ? [r.data.data] : [] };
+        }
+        return { data: await listAll(client, `prism.v4/${ns}`, { suffix: path, pageSize: 100 }) };
+      }
       // ponytail: un service déployé mais tombé répond aussi 503 et passerait pour « aucun » ; le
       // distinguer demanderait d'interroger le gestionnaire du service.
       catch (err) {
@@ -176,6 +192,8 @@ async function collectPc(client) {
   // Certificat SSL (clustermgmt v4.2+) : la réponse porte la clé privée ; on n'en garde que ce
   // qu'on lit dans le certificat public.
   await perCluster(client, out, clusters, 'v4_ssl_certificates', '/ssl-certificate', (d) => (d ? [certInfo(d)] : []));
+  // Dimensionnement des CVM (mémoire ; le nombre de vCPU reste à confronter au Prism Element).
+  await perCluster(client, out, clusters, 'v4_cvms', '/cvms', (d) => d || []);
   out.data = scrub(out.data);
   return out;
 }

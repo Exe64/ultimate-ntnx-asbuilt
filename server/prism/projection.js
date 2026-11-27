@@ -24,12 +24,14 @@ const PC_KEYS = [
   'v4_license_keys', 'v4_categories', 'v4_lcm_entities', 'v4_domain_managers',
   'v4_rsyslog', 'v4_ssl_certificates', 'v4_images', 'v4_network_security_policies', 'v4_vpcs',
   'v4_file_servers', 'v4_object_stores', 'v4_volume_groups',
+  'v4_host_nics', 'v4_cvms', 'v4_license_entitlements', 'v4_license_compliances', 'v4_recovery_plans',
+  'v4_key_management_servers', 'v4_saml_identity_providers', 'v4_alert_email_config',
   'pc_clusters_v3',   // repli quand clustermgmt v4 n'est pas exposé
 ];
 
-// Clés lues sur un snapshot de Prism Element. Ce que v4 n'expose pas au niveau PC :
-// pools de stockage, protection domains hérités, SMTP, alertes, HA, licence par nœud, et le
-// débit des ports physiques (`host_nics_v2` — v4 publie les uplinks, jamais leur vitesse).
+// Clés lues sur un snapshot de Prism Element. Ce que v4 n'expose pas au niveau PC : HA, nom et seuil
+// ILM des pools de stockage, protection domains hérités. Le reste n'y sert plus que de secours quand
+// la v4 n'a pas répondu (cf. plan #17).
 const PE_KEYS = [
   'cluster_v2', 'hosts_v2', 'host_nics_v2', 'storage_containers_v2', 'storage_pools_v2', 'disks_v2',
   'vms_v2', 'networks_v2', 'ha_v2', 'protection_domains_v2', 'pd_status_v2',
@@ -54,6 +56,11 @@ const CLUSTER_REF_PATHS = {
   v4_snmp: ['clusterExtId'],
   v4_rsyslog: ['clusterExtId'],
   v4_ssl_certificates: ['clusterExtId'],
+  v4_host_nics: ['clusterExtId'],
+  v4_cvms: ['clusterExtId'],
+  // Licences : chaque entrée EST un cluster (son extId), le PC compris.
+  v4_license_entitlements: ['extId'],
+  v4_license_compliances: ['extId'],
 };
 
 const getPath = (obj, path) =>
