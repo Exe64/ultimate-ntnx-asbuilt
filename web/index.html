@@ -193,9 +193,10 @@
 </section>
 
 <section id="pe" hidden>
-  <h2><span class="num">2</span>Prism Element</h2>
-  <p class="hint lead">Clusters déclarés par le Prism Central. Chacun se collecte avec ses propres identifiants ;
-    une ligne laissée sans mot de passe est documentée depuis le Prism Central seul.</p>
+  <h2><span class="num">2</span>Compléments Prism Element</h2>
+  <p class="hint lead">Facultatif : le Prism Central suffit au document. Le Prism Element y ajoute la haute
+    disponibilité, le nom et le seuil ILM des pools de stockage et les protection domains hérités. Chaque cluster
+    se collecte avec ses propres identifiants ; une ligne laissée sans mot de passe est ignorée.</p>
   <form id="peForm">
     <div class="scroll"><table>
       <thead><tr><th>Cluster</th><th>Adresse</th><th>Utilisateur</th><th>Mot de passe</th><th>État</th></tr></thead>
@@ -203,6 +204,7 @@
     </table></div>
     <button type="button" id="peCopy" class="ghost">Recopier la première ligne sur les autres</button>
     <button type="submit">Collecter les Prism Element</button>
+    <button type="button" id="peSkip" class="ghost">Passer : document depuis le Prism Central seul</button>
   </form>
 </section>
 

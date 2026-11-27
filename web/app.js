@@ -140,6 +140,12 @@ $('peCopy').addEventListener('click', () => {
   }
 });
 
+// Le Prism Element est facultatif : passer l'étape ouvre le document sur la seule collecte du PC.
+$('peSkip').addEventListener('click', () => {
+  renderDocumentStep();
+  $('doc').scrollIntoView({ behavior: 'smooth' });
+});
+
 // Clusters collectés en même temps : assez pour ne pas attendre, pas assez pour saturer le poste.
 const PE_CONCURRENCY = 3;
 

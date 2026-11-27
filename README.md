@@ -32,6 +32,7 @@ illustrated with diagrams drawn from the actual configuration.
 - **Single executable, nothing to install**: no database, no runtime, no admin rights.
 - **Read-only**: a read-only Prism account is enough; nothing is changed on the environment.
 - **Multi-cluster**: every cluster registered on Prism Central is detected and documented.
+- **Prism Central is enough**: the v4 APIs cover the document; Prism Element credentials are an optional add-on.
 - **Automatic diagrams**: virtual network, physical cabling (from LLDP/CDP) and more, drawn from the collected data.
 - **Your branding**: layout driven by an editable Word template.
 - **Change report**: compare two exported collections and get what changed, as a Word document.
@@ -89,8 +90,9 @@ the check off (see [Advanced settings](#advanced-settings)).
 
 1. **Launch** the executable: the interface opens in your browser (or in its own window for the Windows app).
 2. **Connect to Prism Central**: address and account (read-only is enough), then *Detect clusters*.
-3. **Collect**: for each cluster, enter its Prism Element credentials, then *Collect*.
-   A cluster left without a password is documented from Prism Central alone.
+3. **Prism Element add-ons (optional)**: Prism Central credentials are enough for the document.
+   Prism Element credentials only add high availability, storage pool names and ILM thresholds, and
+   legacy protection domains; enter them per cluster and *Collect*, or *Skip*.
 4. **Complete** what Prism cannot know (customer, site, switches), then *Generate .docx*.
 
 ## Compare two collections

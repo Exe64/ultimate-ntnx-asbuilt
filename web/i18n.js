@@ -25,8 +25,10 @@ export const EN = {
   'Collecte exportée (.json)': 'Exported collection (.json)',
   "Recharge la collecte et les saisies d'un fichier exporté à l'étape 3 : le document se régénère sans réinterroger Prism. Le fichier ne contient aucun identifiant.":
     'Reloads the collection and inputs from a file exported at step 3: the document is rebuilt without querying Prism again. The file holds no credentials.',
-  'Clusters déclarés par le Prism Central. Chacun se collecte avec ses propres identifiants ; une ligne laissée sans mot de passe est documentée depuis le Prism Central seul.':
-    'Clusters declared by Prism Central. Each one is collected with its own credentials; a row left without a password is documented from Prism Central only.',
+  'Compléments Prism Element': 'Prism Element add-ons',
+  'Facultatif : le Prism Central suffit au document. Le Prism Element y ajoute la haute disponibilité, le nom et le seuil ILM des pools de stockage et les protection domains hérités. Chaque cluster se collecte avec ses propres identifiants ; une ligne laissée sans mot de passe est ignorée.':
+    'Optional: Prism Central is enough for the document. Prism Element adds high availability, storage pool names and ILM thresholds, and legacy protection domains. Each cluster is collected with its own credentials; a row left without a password is skipped.',
+  'Passer : document depuis le Prism Central seul': 'Skip: document from Prism Central only',
   'Adresse': 'Address',
   'État': 'State',
   'Recopier la première ligne sur les autres': 'Copy the first row to the others',
