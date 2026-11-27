@@ -1,7 +1,7 @@
 # Roadmap Ultimate As-Built
 
 > Backlog actif. L'historique détaillé est archivé dans `_archives/`.
-> Dernière mise à jour : 2026-11-18.
+> Dernière mise à jour : 2026-11-27.
 
 ## Contexte
 
@@ -13,6 +13,8 @@ Backlog consolidé : plans nommés d'après leur issue GitHub (voir `doc/roadmap
 
 ## À faire
 
+- **[Issue: #17] `#17` — As-built complet depuis le seul Prism Central** 🟢 high · L — API v4 d'abord ; le Prism Element ne sert plus qu'à la HA, aux pools et aux protection domains hérités.
+  [`17-pe-optionnel-v4.md`](17-pe-optionnel-v4.md)
 - **[Issue: #15] `#15` — Sauvegarde automatique avant une mise à jour** 🟢 medium · M — La collecte et les saisies survivent au redémarrage d'une mise à jour.
   [`15-sauvegarde-avant-mise-a-jour.md`](15-sauvegarde-avant-mise-a-jour.md)
 - **[Issue: #16] `#16` — Comparaison de deux collectes** 🟢 medium · L — Rapport d'écarts .docx entre deux collectes exportées.

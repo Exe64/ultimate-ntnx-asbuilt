@@ -142,5 +142,14 @@
     "title": "[🔀] Plan #16 - Comparaison de deux collectes",
     "deps": [],
     "path": "16-comparaison-collectes.md"
+  },
+  {
+    "id": "17",
+    "status": "active",
+    "priority": "high",
+    "complexity": "L",
+    "title": "[🔌] Plan #17 - As-built complet depuis le seul Prism Central",
+    "deps": [],
+    "path": "17-pe-optionnel-v4.md"
   }
 ]
