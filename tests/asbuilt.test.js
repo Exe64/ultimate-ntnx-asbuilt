@@ -179,6 +179,30 @@ test('PC seul : le document se passe du Prism Element', async () => {
     expect([view.nodes[0].cvmIp, view.nodes[0].hostIp]).toEqual(['10.0.0.21', '10.0.0.11']);
     expect(cells('cfg.cvm')[0][2]).toBeNull();
 
+    // Plan #18 : réseau, placement et démarrage des VM, matériel, accès, sauvegarde, LCM.
+    expect(JSON.stringify(bundle)).not.toMatch(/k-community|k-engine|k-client/);
+    // Sections décochées par défaut (traps SNMP, droits d'accès) : lues sur le modèle complet.
+    const every = buildAsBuiltModel({ bundle, lang: 'fr', enabled: null }).sections;
+    const allCells = (id) => every.find(x => x.id === id).rows.map(r => r.cells);
+    expect(get('cfg.snmptraps')).toBeUndefined();
+    expect(cells('cfg.bonds')).toEqual([['br0-up', 'gondor-1', 'vs0', 'Balance-TCP (LACP)', 'Négocié', 'eth0 (25G)']]);
+    expect(cells('cfg.segments')).toEqual([['backplane', 'Backplane', 3000, 9000, 'eth2']]);
+    expect(allCells('cfg.snmptraps')).toEqual([['Trap', 'nms — 10.0.0.30', 162, 'UDP', 'V3', 'snmpuser'], ['Écoute', null, 161, 'UDP', null, null]]);
+    expect(kv('cfg.storageconfig')).toMatchObject({ 'Réserve de reconstruction': 'Oui', "Seuil d'alerte de capacité résiliente": '75 %', 'Seuil de surallocation': '150 %', 'RF1 autorisé': 'Non' });
+    expect(cells('host.blocks')).toEqual([['BLK-1', 'NX-8155-G9', 1, 'gondor-1 (1)']]);
+    expect(view.nodes[0]).toMatchObject({ model: 'NX-8155-G9', serial: 'BLK-1' });
+    expect(cells('pc.vmplacement')).toEqual([
+      ['Affinité VM-hôte', 'sql-on-fast', 'App: SQL', 'Hosts: Fast', '2 conforme(s), 0 non conforme(s)'],
+      ['Anti-affinité VM-VM', 'ad-split', 'App: AD', null, '2 conforme(s), 0 non conforme(s)'],
+      ['Anti-affinité (héritée)', 'legacy-ad', '2 VM', 'Gondor', null],
+    ]);
+    expect(cells('pc.vmstartup')).toEqual([['boot-order', 'App: AD → App: SQL', 'ON, délai 60 s']]);
+    expect(cells('pc.backup')).toEqual([['Cluster', 'Rohan', '2026-11-27', 'Active']]);
+    expect(kv('pc.lcm')).toMatchObject({ 'Version LCM': '3.1', 'Source des mises à jour': 'https://download.nutanix.com/lcm/2.0', Connectivité: 'Site connecté', 'Inventaire automatique': 'Oui, 03:00' });
+    expect(allCells('sec.authz')).toEqual([['ops-admins', 'role-ops', 0, 1, null], ['1 politique(s) système', null, null, null, null]]);
+    expect(SECTIONS.find(x => x.id === 'sec.authz').defaultEnabled).toBe(false);
+    expect(cells('pc.identity')).toContainEqual(['Groupe', 'ops', 'CN=ops,DC=gondor,DC=local', 'LDAP']);
+
     // Ce que seul le PE expose dit pourquoi il manque, au lieu de passer pour « Non configuré ».
     for (const id of ['cfg.ha', 'cfg.auth', 'cfg.dataprotection']) {
       expect(get(id).emptyText).toBe('Non collecté — disponible avec les identifiants Prism Element');

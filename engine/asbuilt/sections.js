@@ -40,6 +40,12 @@ const PLATFORM_CATEGORY_TYPES = ['SYSTEM', 'INTERNAL'];
 const isPlatformCategory = (c) =>
   PLATFORM_CATEGORY_TYPES.includes(String(c.type ?? '').toUpperCase());
 
+// Catégories référencées par extId (politiques VM, plan #18) → « Clé: valeur ».
+const categoryNames = (ctx, refs) => {
+  const byId = new Map(ctx.pc.list('v4_categories').map(c => [c.extId, `${c.key}: ${c.value}`]));
+  return (refs || []).map(r => byId.get(r.extId) || r.extId).join(', ');
+};
+
 // ─── Chapitre Présentation ────────────────────────────────────────────────────
 
 // Texte du document de référence. Le client et l'intégrateur ne sont nommés que s'ils sont connus :
@@ -272,11 +278,12 @@ const PC_SECTIONS = [
   {
     id: 'pc.identity', chapter: 'pc', kind: 'table',
     title: { fr: 'Comptes, rôles et annuaires', en: 'Accounts, Roles and Directories' },
-    keys: ['v4_users', 'v4_directory_services'],
+    keys: ['v4_users', 'v4_directory_services', 'v4_user_groups'],
     build: (ctx) => {
       const users = ctx.pc.list('v4_users');
       const dirs  = ctx.pc.list('v4_directory_services');
-      if (!users.length && !dirs.length) return null;
+      const groups = ctx.pc.list('v4_user_groups');
+      if (!users.length && !dirs.length && !groups.length) return null;
       return {
         columns: [
           { fr: 'Type', en: 'Type' }, { fr: 'Nom', en: 'Name' },
@@ -290,6 +297,9 @@ const PC_SECTIONS = [
           ...dirs.map(d => ctx.row([
             ctx.lang === 'en' ? 'Directory' : 'Annuaire', d.name,
             d.url || (d.serviceAccount?.username ?? ''), ctx.f.label(d.directoryType) || '',
+          ], 'api')),
+          ...groups.map(g => ctx.row([
+            ctx.lang === 'en' ? 'Group' : 'Groupe', g.name, g.distinguishedName || '', ctx.f.label(g.groupType) || '',
           ], 'api')),
         ],
       };
@@ -305,6 +315,93 @@ const PC_SECTIONS = [
       return {
         columns: [{ fr: 'Clé', en: 'Key' }, { fr: 'Valeur', en: 'Value' }, { fr: 'Description', en: 'Description' }],
         rows: cats.map(c => ctx.row([c.key, c.value, c.description || ''], 'api')),
+      };
+    },
+  },
+  {
+    id: 'pc.vmplacement', chapter: 'pc', kind: 'table',
+    title: { fr: 'Règles de placement des VM', en: 'VM Placement Rules' },
+    keys: ['v4_vm_host_affinity_policies', 'v4_vm_anti_affinity_policies', 'v4_legacy_vm_anti_affinity_policies'],
+    build: (ctx) => {
+      const en = ctx.lang === 'en';
+      const compliance = (p) => (p.numCompliantVms != null || p.numNonCompliantVms != null)
+        ? `${p.numCompliantVms ?? 0} ${en ? 'compliant' : 'conforme(s)'}, ${p.numNonCompliantVms ?? 0} ${en ? 'not compliant' : 'non conforme(s)'}` : '';
+      const names = new Map(ctx.pc.list('v4_clusters').map(c => [c.extId, c.name]));
+      const rows = [
+        ...ctx.pc.list('v4_vm_host_affinity_policies').map(p => ctx.row([
+          en ? 'VM-host affinity' : 'Affinité VM-hôte', p.name, categoryNames(ctx, p.vmCategories), categoryNames(ctx, p.hostCategories), compliance(p),
+        ], 'api')),
+        ...ctx.pc.list('v4_vm_anti_affinity_policies').map(p => ctx.row([
+          en ? 'VM-VM anti-affinity' : 'Anti-affinité VM-VM', p.name, categoryNames(ctx, p.categories), '', compliance(p),
+        ], 'api')),
+        ...ctx.pc.list('v4_legacy_vm_anti_affinity_policies').map(p => ctx.row([
+          en ? 'Anti-affinity (legacy)' : 'Anti-affinité (héritée)', p.name, `${(p.vms || []).length} VM`, names.get(p.cluster?.extId) || '', '',
+        ], 'api')),
+      ];
+      if (!rows.length) return null;
+      return {
+        columns: [
+          { fr: 'Type', en: 'Type' }, { fr: 'Nom', en: 'Name' }, { fr: 'VM', en: 'VMs' },
+          { fr: 'Hôtes', en: 'Hosts' }, { fr: 'Conformité', en: 'Compliance' },
+        ],
+        rows,
+      };
+    },
+  },
+  {
+    id: 'pc.vmstartup', chapter: 'pc', kind: 'table',
+    title: { fr: 'Ordre de démarrage des VM', en: 'VM Startup Order' },
+    keys: ['v4_vm_startup_policies'],
+    build: (ctx) => {
+      const pol = ctx.pc.list('v4_vm_startup_policies');
+      if (!pol.length) return null;
+      const en = ctx.lang === 'en';
+      return {
+        columns: [{ fr: 'Politique', en: 'Policy' }, { fr: 'Ordre des groupes', en: 'Group Order' }, { fr: 'Conditions de démarrage', en: 'Start Conditions' }],
+        rows: pol.map(p => ctx.row([
+          p.name,
+          (p.groups || []).map(g => categoryNames(ctx, g.categories)).join(' → '),
+          (p.startConditions || []).map(c => [ctx.f.label(c.powerStateCriteria), c.delayDurationSecs != null ? `${en ? 'delay' : 'délai'} ${c.delayDurationSecs} s` : null].filter(Boolean).join(', ')).join(' ; '),
+        ], 'api')),
+      };
+    },
+  },
+  {
+    id: 'pc.backup', chapter: 'pc', kind: 'table',
+    title: { fr: 'Sauvegarde du Prism Central', en: 'Prism Central Backup' },
+    keys: ['v4_pc_backup_targets'],
+    build: (ctx) => {
+      const targets = ctx.pc.list('v4_pc_backup_targets');
+      if (!targets.length) return null;
+      const en = ctx.lang === 'en';
+      // Cible : un cluster (ClusterReference) ou un magasin objet (S3, Nutanix Objects).
+      const where = (loc = {}) => loc.config
+        ? [en ? 'Cluster' : 'Cluster', loc.config.name || loc.config.extId]
+        : [en ? 'Object store' : 'Magasin objet', loc.providerConfig?.bucketName || loc.providerConfig?.endpoint || ''];
+      return {
+        columns: [{ fr: 'Type', en: 'Type' }, { fr: 'Cible', en: 'Target' }, { fr: 'Dernière synchronisation', en: 'Last Sync' }, { fr: 'État', en: 'State' }],
+        rows: targets.map(t => ctx.row([
+          ...where(t.location), t.lastSyncTime ? String(t.lastSyncTime).slice(0, 10) : '',
+          t.isBackupPaused ? `${en ? 'Paused' : 'En pause'}${t.backupPauseReason ? ` (${t.backupPauseReason})` : ''}` : (en ? 'Active' : 'Active'),
+        ], 'api')),
+      };
+    },
+  },
+  {
+    id: 'pc.lcm', chapter: 'pc', kind: 'kv',
+    title: { fr: 'Configuration LCM', en: 'LCM Configuration' },
+    keys: ['v4_lcm_config'],
+    build: (ctx) => {
+      const c = ctx.pc.list('v4_lcm_config')[0];
+      if (!c) return null;
+      return {
+        rows: [
+          ctx.kv({ fr: 'Version LCM', en: 'LCM Version' }, c.displayVersion || c.version, null),
+          ctx.kv({ fr: 'Source des mises à jour', en: 'Update Source' }, c.url, null),
+          ctx.kv({ fr: 'Connectivité', en: 'Connectivity' }, ctx.f.label(c.connectivityType), null),
+          ctx.kv({ fr: 'HTTPS', en: 'HTTPS' }, ctx.f.bool(c.isHttpsEnabled), null),
+          ctx.kv({ fr: 'Inventaire automatique', en: 'Auto Inventory' }, c.isAutoInventoryEnabled ? [ctx.f.bool(true), c.autoInventorySchedule].filter(Boolean).join(', ') : ctx.f.bool(false), null),
+        ],
       };
     },
   },
@@ -530,6 +627,31 @@ const SEC_SECTIONS = [
           Array.isArray(r.operations) ? r.operations.length : null,
           r.assignedUsersCount, r.assignedUserGroupsCount,
         ], 'api')),
+      };
+    },
+  },
+  {
+    id: 'sec.authz', chapter: 'sec', kind: 'table', defaultEnabled: false,
+    title: { fr: "Droits d'accès", en: 'Access Rights' },
+    keys: ['v4_authz_policies'],
+    // Les politiques système sont les mêmes partout : seules celles du client sont listées, les autres
+    // comptées.
+    build: (ctx) => {
+      const all = ctx.pc.list('v4_authz_policies');
+      if (!all.length) return null;
+      const own = all.filter(p => p.isSystemDefined !== true);
+      const system = all.length - own.length;
+      const roles = new Map(ctx.pc.list('v4_roles').map(r => [r.extId, r.displayName || r.name]));
+      const en = ctx.lang === 'en';
+      return {
+        columns: [
+          { fr: 'Politique', en: 'Policy' }, { fr: 'Rôle', en: 'Role' }, { fr: 'Utilisateurs', en: 'Users' },
+          { fr: 'Groupes', en: 'Groups' }, { fr: 'Description', en: 'Description' },
+        ],
+        rows: [
+          ...own.map(p => ctx.row([p.displayName, roles.get(p.role) || p.role, p.assignedUsersCount, p.assignedUserGroupsCount, p.description || ''], 'api')),
+          ...(system ? [ctx.row([en ? `${system} system policies` : `${system} politique(s) système`, '', '', '', ''], 'api')] : []),
+        ],
       };
     },
   },
@@ -808,6 +930,20 @@ const HOST_SECTIONS = [
     }),
   },
   {
+    id: 'host.blocks', chapter: 'host', kind: 'table',
+    title: { fr: 'Blocs', en: 'Blocks' },
+    keys: ['v4_rackable_units'],
+    build: (ctx) => {
+      if (!ctx.cluster.blocks.length) return null;
+      return {
+        columns: [{ fr: 'Numéro de série', en: 'Block Serial' }, { fr: 'Modèle', en: 'Model' }, { fr: 'Rack', en: 'Rack' }, { fr: 'Nœuds', en: 'Nodes' }],
+        rows: ctx.cluster.blocks.map(b => ctx.row([
+          b.serial, b.model, b.rack, b.nodes.map(n => (n.position != null ? `${n.name} (${n.position})` : n.name)).join(', '),
+        ], 'api')),
+      };
+    },
+  },
+  {
     id: 'host.cpumem', chapter: 'host', kind: 'table',
     title: { fr: 'CPU et mémoire', en: 'Host CPU and Memory' },
     keys: ['v4_hosts', 'hosts_v2'],
@@ -881,6 +1017,10 @@ const CFG_SECTIONS = [
         ctx.kv({ fr: 'Version NCC', en: 'NCC Version' }, ctx.cluster.nccVersion, null),
         ctx.kv({ fr: 'Serveurs NTP', en: 'NTP Server(s)' }, ctx.f.joinList(ctx.cluster.ntp), ctx.plan('ntpServers'), { list: true }),
         ctx.kv({ fr: 'Serveurs DNS', en: 'DNS Server(s)' }, ctx.f.joinList(ctx.cluster.dns), ctx.plan('dnsServers'), { list: true }),
+        // Liste blanche NFS (v4, plan #18) : seulement quand elle est configurée.
+        ...((ctx.cluster.list('v4_clusters')[0]?.network?.nfsSubnetWhitelist || []).length
+          ? [ctx.kv({ fr: 'Liste blanche NFS', en: 'NFS Whitelist' }, ctx.f.joinList(ctx.cluster.list('v4_clusters')[0].network.nfsSubnetWhitelist), null, { list: true })]
+          : []),
       ],
     }),
   },
@@ -932,6 +1072,37 @@ const CFG_SECTIONS = [
         rows: vs.map(v => ctx.row([
           v.name, v.node, v.bridge, ctx.f.label(v.bondMode), v.mtu, v.uplinks.join(', '),
         ], 'api')),
+      };
+    },
+  },
+  {
+    id: 'cfg.bonds', chapter: 'cfg', kind: 'table',
+    title: { fr: 'Bonds et uplinks', en: 'Uplink Bonds' },
+    keys: ['v4_uplink_bonds'],
+    build: (ctx) => {
+      if (!ctx.cluster.bonds.length) return null;
+      return {
+        columns: [
+          { fr: 'Bond', en: 'Bond' }, { fr: 'Nœud', en: 'Node' }, { fr: 'Virtual switch', en: 'Virtual Switch' },
+          { fr: 'Mode', en: 'Mode' }, { fr: 'LACP', en: 'LACP' }, { fr: 'Interfaces', en: 'Interfaces' },
+        ],
+        rows: ctx.cluster.bonds.map(b => ctx.row([b.name, b.node, b.vswitch, ctx.f.label(b.type), ctx.f.label(b.lacp), b.nics.join(', ')], 'api')),
+      };
+    },
+  },
+  {
+    id: 'cfg.segments', chapter: 'cfg', kind: 'table',
+    title: { fr: 'Segmentation réseau', en: 'Network Segmentation' },
+    keys: ['v4_network_segments'],
+    build: (ctx) => {
+      const segs = ctx.cluster.list('v4_network_segments');
+      if (!segs.length) return null;
+      return {
+        columns: [
+          { fr: 'Segment', en: 'Segment' }, { fr: 'Service', en: 'Service' }, { fr: 'VLAN', en: 'VLAN' },
+          { fr: 'MTU', en: 'MTU' }, { fr: 'Interface CVM', en: 'CVM Interface' },
+        ],
+        rows: segs.map(g => ctx.row([g.name, ctx.f.label(g.serviceName), g.vlanId, g.mtu, g.cvmNetworkSegmentInterfaceName], 'api')),
       };
     },
   },
@@ -1023,6 +1194,25 @@ const CFG_SECTIONS = [
           c.name, c.rf, ctx.f.bool(c.compression), ctx.f.onOff(c.ssdDedup),
           ctx.f.onOff(c.hddDedup), ctx.f.onOff(c.erasureCoding),
         ], 'api')),
+      };
+    },
+  },
+  {
+    id: 'cfg.storageconfig', chapter: 'cfg', kind: 'kv',
+    title: { fr: 'Résilience du stockage', en: 'Storage Resiliency' },
+    keys: ['v4_storage_config'],
+    build: (ctx) => {
+      const c = ctx.cluster.list('v4_storage_config')[0];
+      if (!c) return null;
+      const pct = (v) => (v != null && v >= 0 ? `${v} %` : null);
+      return {
+        rows: [
+          ctx.kv({ fr: 'Réserve de reconstruction', en: 'Rebuild Capacity Reservation' }, ctx.f.bool(c.isRebuildReservationEnabled), null),
+          ctx.kv({ fr: 'Seuil d\'alerte de capacité résiliente', en: 'Resilient Capacity Warning Threshold' }, pct(c.resilientCapacityWarningThresholdPercentage), null),
+          ctx.kv({ fr: 'Seuil de surallocation', en: 'Over-Provisioning Caution Threshold' }, pct(c.storageOverProvisioningCautionThreshold), null),
+          ctx.kv({ fr: 'RF1 autorisé', en: 'RF1 Enabled' }, ctx.f.bool(c.isRf1Enabled), null),
+          ctx.kv({ fr: 'Résilience pendant la maintenance', en: 'Delayed Maintenance Resiliency' }, ctx.f.bool(c.isDelayedMaintenanceResiliencyEnabled), null),
+        ],
       };
     },
   },
@@ -1126,6 +1316,25 @@ const CFG_SECTIONS = [
       return {
         columns: [{ fr: 'Utilisateur', en: 'Username' }, { fr: 'Confidentialité', en: 'Privacy Type' }, { fr: 'Authentification', en: 'Auth Type' }],
         rows: users.map(u => ctx.row([u.username || u.name, u.privType || u.privacyType, u.authType], 'api')),
+      };
+    },
+  },
+  {
+    id: 'cfg.snmptraps', chapter: 'cfg', kind: 'table', defaultEnabled: false,
+    title: { fr: 'Traps SNMP', en: 'SNMP Traps' },
+    keys: ['v4_snmp_traps'],
+    build: (ctx) => {
+      const all = ctx.cluster.list('v4_snmp_traps');
+      if (!all.length) return null;
+      const en = ctx.lang === 'en';
+      return {
+        columns: [
+          { fr: 'Type', en: 'Type' }, { fr: 'Destination', en: 'Destination' }, { fr: 'Port', en: 'Port' },
+          { fr: 'Protocole', en: 'Protocol' }, { fr: 'Version', en: 'Version' }, { fr: 'Utilisateur', en: 'Username' },
+        ],
+        rows: all.map(t => (t.kind === 'trap'
+          ? ctx.row([t.inform ? 'Inform' : 'Trap', [t.receiver, addr(t.address)].filter(Boolean).join(' — '), t.port, t.protocol, t.version, t.username], 'api')
+          : ctx.row([en ? 'Listener' : 'Écoute', '', t.port, t.protocol, '', ''], 'api'))),
       };
     },
   },

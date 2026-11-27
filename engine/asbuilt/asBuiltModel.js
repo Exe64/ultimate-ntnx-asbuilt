@@ -78,6 +78,15 @@ const VALUE_LABELS = {
   NO_LICENSE:           { fr: 'Sans licence', en: 'No license' },
   UNLICENSED_CLUSTER:   { fr: 'Cluster sans licence', en: 'Unlicensed cluster' },
   SUCCESS:              { fr: 'Établie', en: 'Established' },
+  NEGOTIATED:           { fr: 'Négocié', en: 'Negotiated' },
+  CONFIGURED:           { fr: 'Configuré', en: 'Configured' },
+  NIL:                  { fr: 'Aucun', en: 'None' },
+  CONNECTED_SITE:       { fr: 'Site connecté', en: 'Connected site' },
+  DARK_SITE:            { fr: 'Site isolé (dark site)', en: 'Dark site' },
+  BACKPLANE:            { fr: 'Backplane', en: 'Backplane' },
+  VOLUMES:              { fr: 'Volumes', en: 'Volumes' },
+  DR:                   { fr: 'Reprise d\'activité', en: 'Disaster recovery' },
+  EXTERNAL_STORAGE:     { fr: 'Stockage externe', en: 'External storage' },
   FIRMWARE:             { fr: 'Firmware', en: 'Firmware' },
 };
 
