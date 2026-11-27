@@ -154,10 +154,11 @@ function diskFromV4(d) {
 
 // ─── Ports physiques d'un nœud ────────────────────────────────────────────────
 
-// La vitesse d'un lien ne se lit qu'en v2, hôte par hôte (`host_nics_v2`) : l'API v4 du Prism
-// Central publie les uplinks d'un virtual switch, jamais leur débit. Un port dont la vitesse
-// n'est pas remontée reste sans vitesse — c'est un port qu'on ne connaît pas, pas un port lent.
-const isLinkUp = (v) => v === true || /^up$/i.test(String(v ?? ''));
+// La vitesse négociée d'un lien se lit en v4 (`v4_host_nics.linkSpeedInKbps`, mesuré sur pc.7.6 :
+// 10 000 000 sur le port branché, 0 sur les autres), et en v2 en secours (`host_nics_v2`). Un port
+// dont la vitesse n'est pas remontée reste sans vitesse — c'est un port qu'on ne connaît pas, pas un
+// port lent. L'état v4 (`interfaceStatus`) vaut 1 ou 0.
+const isLinkUp = (v) => v === true || v === 1 || /^(up|1)$/i.test(String(v ?? ''));
 
 export function speedLabel(kbps) {
   const n = Number(kbps);
@@ -173,18 +174,30 @@ const portFromV2 = (n) => ({
   active: n.link_status == null ? null : isLinkUp(n.link_status),
 });
 
+const portFromV4 = (n) => ({
+  name: n.name || null,
+  speed: speedLabel(n.linkSpeedInKbps),
+  active: n.interfaceStatus == null ? null : isLinkUp(n.interfaceStatus),
+});
+
 /**
  * Ports physiques par nœud, dans l'ordre des nœuds du cluster puis des hôtes inconnus d'eux.
  * Le port IPMI n'en fait pas partie : il appartient au BMC, qu'aucun inventaire d'hôte ne liste.
  */
-function nodePortsFrom(nics, nodes) {
+function nodePortsFrom(nicsV4, nicsV2, nodes) {
+  // v4 d'abord ; la v2 ne complète que ce que la v4 n'a pas dit (port absent, champ vide).
   const byHost = new Map();
-  for (const n of nics) {
+  const add = (n, toPort) => {
     const host = n._host_name || n.host_name || null;
-    if (!host) continue;
+    if (!host) return;
     if (!byHost.has(host)) byHost.set(host, []);
-    byHost.get(host).push(portFromV2(n));
-  }
+    const port = toPort(n);
+    const prev = byHost.get(host).find(p => p.name === port.name);
+    if (prev) { for (const k of Object.keys(port)) if (prev[k] == null) prev[k] = port[k]; }
+    else byHost.get(host).push(port);
+  };
+  for (const n of nicsV4) add(n, portFromV4);
+  for (const n of nicsV2) add(n, portFromV2);
   if (!byHost.size) return [];
 
   const ordered = nodes.map(n => n.name).filter(name => byHost.has(name));
@@ -356,9 +369,29 @@ export function normalizeCluster(entry, plan = {}) {
     bmcVersion: n.bmcVersion || lcmVersion(n.uuid, /^bmc/i),
   });
 
-  const disks = list('disks_v2').length
-    ? list('disks_v2').map(diskFromV2)
-    : list('v4_disks').map(diskFromV4);
+  // Disques : v4 d'abord, la v2 complète par numéro de série (l'usage n'existe qu'en v2).
+  const disksV2 = list('disks_v2').map(diskFromV2);
+  const disks = list('v4_disks').length
+    ? list('v4_disks').map(diskFromV4).map(d => mergeNode(d, disksV2.find(x => x.serial && x.serial === d.serial) || {}))
+    : disksV2;
+
+  // Capacité par nœud : somme des disques v4 du nœud ; la v2 (usage_stats de l'hôte) en secours.
+  const diskBytesByNode = new Map();
+  for (const d of list('v4_disks')) {
+    if (d.nodeExtId && d.diskSizeBytes != null) diskBytesByNode.set(d.nodeExtId, (diskBytesByNode.get(d.nodeExtId) || 0) + d.diskSizeBytes);
+  }
+  nodes = nodes.map(n => (diskBytesByNode.has(n.uuid) ? { ...n, storageTb: tbOf(diskBytesByNode.get(n.uuid)) } : n));
+
+  // Pools de stockage : la v4 n'a pas d'objet pool, seulement sa référence sur chaque disque. On en
+  // tire l'identifiant, le nombre de disques et la capacité ; le nom et le seuil ILM viennent du PE.
+  const poolsV4 = new Map();
+  for (const d of list('v4_disks')) {
+    if (!d.storagePoolExtId) continue;
+    const pool = poolsV4.get(d.storagePoolExtId) || { id: d.storagePoolExtId, diskCount: 0, bytes: 0 };
+    pool.diskCount += 1; pool.bytes += d.diskSizeBytes || 0;
+    poolsV4.set(d.storagePoolExtId, pool);
+  }
+  const storagePools = [...poolsV4.values()].map(p => ({ id: p.id, diskCount: p.diskCount, capacityTb: tbOf(p.bytes) }));
 
   const networks = list('v4_subnets').length
     ? list('v4_subnets').map(networkFromV4)
@@ -372,11 +405,20 @@ export function normalizeCluster(entry, plan = {}) {
   const vmsV2 = list('vms_v2').map(v => vmFromV2(v, netNames));
   const vms = vmsV2.length ? vmsV2 : list('v4_vms').map(vmFromV4);
 
-  // CVM : d'abord les VM contrôleur vues en v2, sinon ce que les hôtes déclarent.
+  // CVM : d'abord clustermgmt v4 (`/cvms`), complété par les VM contrôleur vues en v2, sinon ce que
+  // les hôtes déclarent. Le `numVcpus` v4 n'est pas repris : sur pc.7.6 il vaut 1 pour une CVM de
+  // 20 Gio, ce qui ressemble à un nombre de sockets (le piège déjà connu en v2) — le vCPU vient du PE.
   const cvmsFromVms = vmsV2.filter(v => v.isCvm).map(v => ({
     name: v.name, memoryGb: v.memoryGb, vcpu: v.vcpu, ip: v.ips[0] || null, fromApi: true,
   }));
-  const cvms = cvmsFromVms.length ? cvmsFromVms : nodes
+  const cvmsV4 = list('v4_cvms').map(c => {
+    const v2cvm = cvmsFromVms.find(x => x.name === c.name);
+    return {
+      name: c.name || null, memoryGb: gbOf(c.memorySizeBytes) ?? v2cvm?.memoryGb ?? null,
+      vcpu: v2cvm?.vcpu ?? null, ip: addr(c.ipAddress) || v2cvm?.ip || null, fromApi: true,
+    };
+  });
+  const cvms = cvmsV4.length ? cvmsV4 : cvmsFromVms.length ? cvmsFromVms : nodes
     .filter(n => n.cvmIp)
     .map(n => ({ name: `${n.name}-CVM`, memoryGb: null, vcpu: null, ip: n.cvmIp, fromApi: n.fromApi }));
 
@@ -385,7 +427,7 @@ export function normalizeCluster(entry, plan = {}) {
   const storageTb = allContainers.length
     ? +Math.max(...allContainers.map(c => c.rawCapacityTb || 0)).toFixed(2) || null
     : null;
-  const nodePorts = nodePortsFrom(list('host_nics_v2'), nodes);
+  const nodePorts = nodePortsFrom(list('v4_host_nics'), list('host_nics_v2'), nodes);
 
   const rfV4 = cfg.redundancyFactor
     ?? (cfg.faultToleranceState?.currentMaxFaultTolerance != null
@@ -400,7 +442,8 @@ export function normalizeCluster(entry, plan = {}) {
     rf: rfV4 ?? v2?.cluster_redundancy_state?.current_redundancy_factor ?? null,
     timezone: cfg.timezone || v2?.timezone || null,
     aosVersion: cfg.buildInfo?.version || v2?.version || null,
-    nccVersion: v2?.ncc_version || null,
+    nccVersion: (cfg.clusterSoftwareMap || []).find(x => x.softwareType === 'NCC')?.version?.replace(/^ncc-/i, '')
+      || v2?.ncc_version || null,
     ntp: addrList(net.ntpServerIpList).length ? addrList(net.ntpServerIpList) : (v2?.ntp_servers || []),
     dns: addrList(net.nameServerIpList).length ? addrList(net.nameServerIpList) : (v2?.name_servers || []),
     hypervisor: hypervisorLabel(v2, nodes),
@@ -408,10 +451,10 @@ export function normalizeCluster(entry, plan = {}) {
     blockModel: nodes.find(n => n.model)?.model || null,
     nodeCount: nodes.length || v4?.nodes?.numberOfNodes || v2?.num_nodes || null,
     cpuCores, memoryGb, storageTb,
-    nodes, cvms, containers, disks, networks, vms, firmware,
+    nodes, cvms, containers, disks, networks, vms, firmware, storagePools,
     vswitches: vswitchesFrom(list('v4_virtual_switches'), entry.extId || v4?.extId || v2?.uuid || null, nodes, nodePorts),
     nodePorts,
-    managementServers: managementServers(v2),
+    managementServers: managementServers(net.managementServer, v2),
     one: get, list,
   };
 }
@@ -434,7 +477,9 @@ function hypervisorLabel(v2, nodes) {
   return nodes.some(n => /nutanix|ahv/i.test(n.hypervisorVersion || '')) ? 'AHV' : null;
 }
 
-function managementServers(v2) {
+function managementServers(v4, v2) {
+  // v4 : un seul serveur (le vCenter d'un cluster ESXi), `isRegistered` ; v2 en secours.
+  if (v4?.ip) return [{ type: v4.type || null, ip: addr(v4.ip), registered: v4.isRegistered === true }];
   return (v2?.management_servers || []).map(m => ({
     type: m.type || null,
     ip: m.ip_address || null,

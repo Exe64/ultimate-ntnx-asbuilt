@@ -502,7 +502,7 @@ function hostPorts(ctx) {
     const ports = names.map((name) => {
       const n2 = a.find(n => n.name === name), n4 = b.find(n => n.name === name);
       const desc = String(pick(n4, 'hostDescription', 'description') || pick(n2, 'description') || '');
-      const linkKbps = pick(n2, 'link_speed_in_kbps') || pick(n4, 'linkSpeedInKbps');
+      const linkKbps = pick(n4, 'linkSpeedInKbps') || pick(n2, 'link_speed_in_kbps');
       const capMbps = pick(n4, 'linkCapacityInMbps') || pick(n2, 'link_capacity_in_mbps');
       const fromDesc = /(\d+)\s*G(?:b|BASE|igabit)/i.exec(desc)?.[1] || (/gigabit/i.test(desc) ? 1 : null);
       const speed = speedLabel(linkKbps) || speedLabel(capMbps && capMbps * 1000) || (fromDesc ? `${fromDesc}G` : null);
