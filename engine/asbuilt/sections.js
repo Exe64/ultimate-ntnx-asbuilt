@@ -464,6 +464,93 @@ const PC_SECTIONS = [
     },
   },
   {
+    id: 'pc.storagepolicies', chapter: 'pc', kind: 'table', defaultEnabled: false,
+    title: { fr: 'Politiques de stockage', en: 'Storage Policies' },
+    keys: ['v4_storage_policies'],
+    build: (ctx) => {
+      const pol = ctx.pc.list('v4_storage_policies');
+      if (!pol.length) return null;
+      return {
+        columns: [
+          { fr: 'Politique', en: 'Policy' }, { fr: 'Catégories', en: 'Categories' }, { fr: 'Compression', en: 'Compression' },
+          { fr: 'Chiffrement', en: 'Encryption' }, { fr: 'QoS (IOPS)', en: 'QoS (IOPS)' }, { fr: 'Réplication', en: 'Replication' },
+        ],
+        rows: pol.map(p => ctx.row([
+          p.name, categoryNames(ctx, (p.categoryExtIds || []).map(extId => ({ extId }))),
+          ctx.f.label(p.compressionSpec?.compressionState), ctx.f.label(p.encryptionSpec?.encryptionState),
+          p.qosSpec?.throttledIops ?? null, ctx.f.label(p.faultToleranceSpec?.replicationFactor),
+        ], 'api')),
+      };
+    },
+  },
+  {
+    id: 'pc.alertpolicies', chapter: 'pc', kind: 'table', defaultEnabled: false,
+    title: { fr: "Politiques d'alerte personnalisées", en: 'Custom Alert Policies' },
+    keys: ['v4_alert_user_policies'],
+    build: (ctx) => {
+      const pol = ctx.pc.list('v4_alert_user_policies');
+      if (!pol.length) return null;
+      return {
+        columns: [{ fr: 'Politique', en: 'Policy' }, { fr: 'Entité', en: 'Entity' }, { fr: 'Impact', en: 'Impact' }, { fr: 'Activée', en: 'Enabled' }],
+        rows: pol.map(p => ctx.row([p.title, ctx.f.label(p.entityType), (p.impactTypes || []).map(i => ctx.f.label(i)).join(', '), ctx.f.bool(p.isEnabled)], 'api')),
+      };
+    },
+  },
+  {
+    id: 'pc.fvn', chapter: 'pc', kind: 'table', defaultEnabled: false,
+    title: { fr: 'Flow Virtual Networking', en: 'Flow Virtual Networking' },
+    keys: ['v4_gateways', 'v4_vpn_connections', 'v4_bgp_sessions', 'v4_floating_ips', 'v4_layer2_stretches'],
+    build: (ctx) => {
+      const en = ctx.lang === 'en';
+      const vpcs = new Map(ctx.pc.list('v4_vpcs').map(v => [v.extId, v.name]));
+      const gws = new Map(ctx.pc.list('v4_gateways').map(g => [g.extId, g.name]));
+      const gw = (ref) => gws.get(ref) || ref;
+      const state = (x) => ctx.f.label(typeof x === 'object' && x ? x.state : x);
+      const rows = [
+        ...ctx.pc.list('v4_gateways').map(g => ctx.row([en ? 'Gateway' : 'Passerelle', g.name, vpcs.get(g.vpcReference) || g.vpcReference || '', state(g.status)], 'api')),
+        ...ctx.pc.list('v4_vpn_connections').map(v => ctx.row(['VPN', v.name, `${gw(v.localGatewayReference)} ↔ ${gw(v.remoteGatewayReference)}`, state(v.ipsecTunnelStatus)], 'api')),
+        ...ctx.pc.list('v4_bgp_sessions').map(b => ctx.row(['BGP', b.name, `${gw(b.localGatewayReference)} ↔ ${gw(b.remoteGatewayReference)}`, state(b.status)], 'api')),
+        ...ctx.pc.list('v4_floating_ips').map(f => ctx.row([en ? 'Floating IP' : 'IP flottante', f.name, `${addr(f.floatingIp) || ''} → ${addr(f.privateIp) || ''}`, ctx.f.label(f.associationStatus)], 'api')),
+        ...ctx.pc.list('v4_layer2_stretches').map(l => ctx.row([en ? 'Layer 2 stretch' : 'Extension L2', l.name, [ctx.f.label(l.connectionType), l.vni != null ? `VNI ${l.vni}` : null].filter(Boolean).join(', '), state(l.stretchStatus)], 'api')),
+      ];
+      if (!rows.length) return null;
+      return {
+        columns: [{ fr: 'Type', en: 'Type' }, { fr: 'Nom', en: 'Name' }, { fr: 'Détail', en: 'Detail' }, { fr: 'État', en: 'State' }],
+        rows,
+      };
+    },
+  },
+  {
+    id: 'pc.catalog', chapter: 'pc', kind: 'table', defaultEnabled: false,
+    title: { fr: 'Catalogue', en: 'Catalog' },
+    keys: ['v4_templates', 'v4_guest_profiles', 'v4_image_placement_policies'],
+    build: (ctx) => {
+      const en = ctx.lang === 'en';
+      const rows = [
+        ...ctx.pc.list('v4_templates').map(t => ctx.row([en ? 'Template' : 'Modèle de VM', t.templateName, t.templateDescription || ''], 'api')),
+        ...ctx.pc.list('v4_guest_profiles').map(g => ctx.row([en ? 'Guest customization' : 'Personnalisation invité', g.name, g.description || ''], 'api')),
+        ...ctx.pc.list('v4_image_placement_policies').map(p => ctx.row([en ? 'Image placement' : 'Placement des images',
+          p.name, [ctx.f.label(p.placementType), ctx.f.label(p.enforcementState)].filter(Boolean).join(', ')], 'api')),
+      ];
+      if (!rows.length) return null;
+      return { columns: [{ fr: 'Type', en: 'Type' }, { fr: 'Nom', en: 'Name' }, { fr: 'Détail', en: 'Detail' }], rows };
+    },
+  },
+  {
+    id: 'pc.iscsi', chapter: 'pc', kind: 'table', defaultEnabled: false,
+    title: { fr: 'Clients iSCSI', en: 'iSCSI Clients' },
+    keys: ['v4_iscsi_clients'],
+    build: (ctx) => {
+      const clients = ctx.pc.list('v4_iscsi_clients');
+      if (!clients.length) return null;
+      const names = new Map(ctx.pc.list('v4_clusters').map(c => [c.extId, c.name]));
+      return {
+        columns: [{ fr: 'Initiateur', en: 'Initiator' }, { fr: 'Cluster', en: 'Cluster' }, { fr: 'Authentification', en: 'Authentication' }, { fr: 'Cibles', en: 'Targets' }],
+        rows: clients.map(c => ctx.row([c.iscsiInitiatorName, names.get(c.clusterReference) || c.clusterReference || '', ctx.f.label(c.enabledAuthentications), c.numVirtualTargets], 'api')),
+      };
+    },
+  },
+  {
     id: 'pc.licensing', chapter: 'pc', kind: 'table',
     title: { fr: 'Licences', en: 'Licensing' },
     keys: ['v4_license_keys'],
@@ -652,6 +739,40 @@ const SEC_SECTIONS = [
           ...own.map(p => ctx.row([p.displayName, roles.get(p.role) || p.role, p.assignedUsersCount, p.assignedUserGroupsCount, p.description || ''], 'api')),
           ...(system ? [ctx.row([en ? `${system} system policies` : `${system} politique(s) système`, '', '', '', ''], 'api')] : []),
         ],
+      };
+    },
+  },
+  {
+    id: 'sec.stig', chapter: 'sec', kind: 'table', defaultEnabled: false,
+    title: { fr: 'Conformité STIG', en: 'STIG Compliance' },
+    keys: ['v4_security_summaries', 'v4_security_profiles'],
+    build: (ctx) => {
+      const sums = ctx.pc.list('v4_security_summaries');
+      if (!sums.length) return null;
+      const names = new Map(ctx.pc.list('v4_clusters').map(c => [c.extId, c.name]));
+      const profiles = ctx.pc.list('v4_security_profiles');
+      return {
+        columns: [
+          { fr: 'Cluster', en: 'Cluster' }, { fr: 'Profil', en: 'Profile' }, { fr: 'Conformes', en: 'Passed' },
+          { fr: 'Non conformes', en: 'Failed' }, { fr: 'Non applicables', en: 'Not Applicable' },
+        ],
+        rows: sums.map(x => ctx.row([
+          names.get(x.clusterExtId) || x.clusterExtId, profiles.filter(p => p.clusterExtId === x.clusterExtId).map(p => ctx.f.label(p.type)).join(', '),
+          x.stigSummary?.passedCount, x.stigSummary?.failedCount, x.stigSummary?.notApplicableCount,
+        ], 'api')),
+      };
+    },
+  },
+  {
+    id: 'sec.stigfailed', chapter: 'sec', kind: 'table', defaultEnabled: false,
+    title: { fr: 'Contrôles STIG non conformes', en: 'Failed STIG Controls' },
+    keys: ['v4_stigs'],
+    build: (ctx) => {
+      const failed = ctx.pc.list('v4_stigs').filter(x => /fail/i.test(String(x.status ?? '')));
+      if (!failed.length) return null;
+      return {
+        columns: [{ fr: 'Règle', en: 'Rule' }, { fr: 'Contrôle', en: 'Control' }, { fr: 'Sévérité', en: 'Severity' }],
+        rows: failed.map(x => ctx.row([x.ruleId, x.title, ctx.f.label(x.severity)], 'api')),
       };
     },
   },
@@ -1417,7 +1538,7 @@ const CFG_SECTIONS = [
   {
     id: 'cfg.encryption', chapter: 'cfg', kind: 'kv',
     title: { fr: 'Chiffrement', en: 'Encryption' },
-    keys: ['v4_clusters', 'v4_disks', 'v4_key_management_servers', 'cluster_v2'],
+    keys: ['dare_v1', 'v4_clusters', 'v4_disks', 'v4_key_management_servers', 'cluster_v2'],
     build: (ctx) => {
       // v4 d'abord, quand le champ est présent ; sinon la v2 du PE ; sinon « non activé » (la v4 omet
       // ce qui n'est pas configuré, vu sur pc.7.6). Exception, le chiffrement au repos : dès que la v4
@@ -1428,7 +1549,16 @@ const CFG_SECTIONS = [
       const cl = v2 || {};
       if (!cfg && !v2) return null;
       const options = [].concat(cfg?.encryptionOption || []);
-      const atRest = options.length ? options.map(o => ctx.f.label(o)).join(', ') : ctx.f.bool(!cfg && !!cl.encrypted);
+      // Exception à « v4 d'abord » (plan #19) : avec le PE, `/v1/data_at_rest_encryption` donne l'état
+      // réel (portée logicielle, mot de passe des SED, conteneurs et disques chiffrés).
+      const dare = ctx.cluster.one('dare_v1');
+      const dareOn = dare && (dare.desiredPasswordProtection === true
+        || (dare.softwareEncryptionScope && !/^(none|null)$/i.test(String(dare.softwareEncryptionScope)))
+        || Object.values(dare.storageContainerEncryptionStatus || {}).some(Boolean)
+        || Object.values(dare.diskEncryptionStatus || {}).some(Boolean));
+      const atRest = dare
+        ? (dareOn ? (dare.softwareEncryptionScope ? `${ctx.f.bool(true)} (${ctx.f.label(dare.softwareEncryptionScope)})` : ctx.f.bool(true)) : ctx.f.bool(false))
+        : options.length ? options.map(o => ctx.f.label(o)).join(', ') : ctx.f.bool(!cfg && !!cl.encrypted);
       const disks = ctx.cluster.list('v4_disks');
       const sed = disks.some(d => d.diskAdvanceConfig?.isSelfEncryptingDrive != null)
         ? disks.some(d => d.diskAdvanceConfig?.isSelfEncryptingDrive === true) : !!cl.has_self_encrypting_drive;
@@ -1491,6 +1621,47 @@ const CFG_SECTIONS = [
             Object.keys(r.remote_ip_ports || {}).join(', '),
           ], 'api')),
         ],
+      };
+    },
+  },
+  {
+    id: 'cfg.witness', chapter: 'cfg', kind: 'table',
+    title: { fr: 'Witness', en: 'Witness' },
+    keys: ['metro_witness_v1'],
+    build: (ctx) => {
+      const w = ctx.cluster.list('metro_witness_v1');
+      if (!w.length) return null;
+      return {
+        columns: [{ fr: 'Witness', en: 'Witness' }, { fr: 'Cluster', en: 'Cluster' }, { fr: 'Adresses', en: 'Addresses' }, { fr: 'Version', en: 'Version' }],
+        rows: w.map(x => ctx.row([x.witnessName, x.clusterName, (x.ipAddresses || []).join(', '), x.nosFullVersion], 'api')),
+      };
+    },
+  },
+  {
+    id: 'cfg.remotesupport', chapter: 'cfg', kind: 'kv', defaultEnabled: false,
+    title: { fr: 'Support à distance', en: 'Remote Support' },
+    keys: ['remote_support_v1'],
+    build: (ctx) => {
+      const r = ctx.cluster.one('remote_support_v1');
+      if (!r) return null;
+      return {
+        rows: [
+          ctx.kv({ fr: 'Activé', en: 'Enabled' }, ctx.f.bool(r.enabled), null),
+          ctx.kv({ fr: 'État du tunnel', en: 'Tunnel Status' }, ctx.f.label(r.connectionStatus), null),
+        ],
+      };
+    },
+  },
+  {
+    id: 'cfg.unprotected', chapter: 'cfg', kind: 'table', defaultEnabled: false,
+    title: { fr: 'VM non protégées', en: 'Unprotected VMs' },
+    keys: ['unprotected_vms_v1'],
+    build: (ctx) => {
+      const vms = ctx.cluster.list('unprotected_vms_v1');
+      if (!vms.length) return null;
+      return {
+        columns: [{ fr: 'VM', en: 'VM' }, { fr: 'Hôte', en: 'Host' }, { fr: 'État', en: 'Power State' }],
+        rows: vms.map(v => ctx.row([v.vmName, v.hostName, ctx.f.label(v.powerState)], 'api')),
       };
     },
   },

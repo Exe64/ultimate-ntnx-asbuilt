@@ -117,14 +117,22 @@ test('collecte sur un Prism auto-signé → bundle → .docx', async () => {
     expect(cells('cfg.proxy')).toEqual([['proxy', '10.0.0.8', 3128, 'HTTP, HTTPS', 'svc']]);
     expect(kv('cfg.certificate')).toMatchObject({ Sujet: 'CN=localhost', 'Émetteur': 'CN=localhost', 'Algorithme de clé': 'RSA_2048' });
     expect(kv('cfg.certificate')["Valide jusqu'au"]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    // Au repos : la v4 fait foi, malgré `encrypted: true` en v2. En transit : champ absent en v4, la
-    // v2 du PE fait foi. KMS lus sur le PC (plan #17).
+    // Au repos : avec le PE, `/v1/data_at_rest_encryption` fait foi (plan #19) — ici rien de chiffré,
+    // malgré `encrypted: true` en v2. En transit : champ absent en v4, la v2 du PE fait foi. KMS lus
+    // sur le PC (plan #17).
     expect(kv('cfg.encryption')).toEqual({ 'Données au repos': 'Non', 'Disques auto-chiffrants': 'Non', 'Containers chiffrés (logiciel)': 'Aucun', 'Données en transit': 'Oui', 'Serveurs de clés (KMS)': 'kms-gondor' });
     // Ports : la v4 (25G) l'emporte sur la v2 (10G) ; le pool garde le nom que lui donne le PE.
     expect(normalizeCluster(bundle.clusters[0]).nodePorts[0].ports).toEqual([{ name: 'eth0', speed: '25G', active: true }]);
     expect(cells('cfg.pools')).toEqual([['default-storage-pool', 'sp-1', '2.00 To', null]]);
     // CVM : mémoire v4, vCPU de la v1 du PE (la v4 annonce 1, faux).
     expect(cells('cfg.cvm')[0].slice(0, 3)).toEqual(['gondor-1-CVM', '32.00 Go', 8]);
+    // Compléments v1 du PE (plan #19) : identifiants du Witness et du proxy de support jamais conservés.
+    expect(JSON.stringify(bundle)).not.toMatch(/k-witness|k-rsproxy|k-vdisk/);
+    expect(cells('cfg.witness')).toEqual([['witness-1', 'Gondor', '10.0.0.60', '7.6']]);
+    const peAll = buildAsBuiltModel({ bundle, lang: 'fr', enabled: null }).sections;
+    const peKv = (id) => Object.fromEntries(peAll.find(x => x.id === id).rows.map(r => [r.label, r.value]));
+    expect(peKv('cfg.remotesupport')).toEqual({ 'Activé': 'Non', 'État du tunnel': 'DISCONNECTED' });
+    expect(peAll.find(x => x.id === 'cfg.unprotected').rows.map(r => r.cells)).toEqual([['app-01', 'gondor-1', 'on']]);
     expect(cells('pc.images')).toEqual([['ubuntu-24.04', 'DISK_IMAGE', '4.00 Go', 'Gondor']]);
     expect(cells('pc.flow')).toEqual([['web-app', 'APPLICATION', 'ENFORCE', null]]);
     expect(cells('pc.files')).toEqual([['files01', null, null]]);
@@ -201,6 +209,25 @@ test('PC seul : le document se passe du Prism Element', async () => {
     expect(kv('pc.lcm')).toMatchObject({ 'Version LCM': '3.1', 'Source des mises à jour': 'https://download.nutanix.com/lcm/2.0', Connectivité: 'Site connecté', 'Inventaire automatique': 'Oui, 03:00' });
     expect(allCells('sec.authz')).toEqual([['ops-admins', 'role-ops', 0, 1, null], ['1 politique(s) système', null, null, null, null]]);
     expect(SECTIONS.find(x => x.id === 'sec.authz').defaultEnabled).toBe(false);
+
+    // Plan #19 : sections de contexte (décochées par défaut) ; secrets et textes longs écartés.
+    expect(JSON.stringify(bundle)).not.toMatch(/k-iscsi|k-longtext/);
+    for (const id of ['pc.storagepolicies', 'pc.alertpolicies', 'pc.fvn', 'pc.catalog', 'pc.iscsi', 'sec.stig', 'sec.stigfailed', 'cfg.remotesupport', 'cfg.unprotected']) {
+      expect(get(id)).toBeUndefined();
+    }
+    expect(allCells('pc.storagepolicies')).toEqual([['gold-storage', 'App: SQL', 'POSTPROCESS', 'ENABLED', 5000, 'THREE']]);
+    expect(allCells('pc.alertpolicies')).toEqual([['CPU VM > 90 %', 'vm', 'PERFORMANCE', 'Oui']]);
+    expect(allCells('pc.catalog')).toEqual([
+      ['Modèle de VM', 'tpl-win2022', 'Windows Server 2022'], ['Personnalisation invité', 'sysprep-fr', 'Domaine gondor'], ['Placement des images', 'iso-paris', 'SOFT, Actif'],
+    ]);
+    expect(allCells('pc.iscsi')).toEqual([['iqn.1991-05.com.microsoft:sql01', 'Gondor', 'CHAP', 2]]);
+    expect(allCells('sec.stig')).toEqual([['Gondor', 'STIG', 120, 3, 10]]);
+    expect(allCells('sec.stigfailed')).toEqual([['V-1', 'SSH root login', 'HIGH']]);
+    // Sans VPC, Flow VN n'est pas interrogé et se dit « Non configuré ».
+    expect(prism.seen.some(p => p.endsWith('/config/gateways'))).toBe(false);
+    expect(every.find(x => x.id === 'pc.fvn').emptyText).toBe('Non configuré');
+    // Witness : activé par défaut ; sans PE, il dit pourquoi il manque.
+    expect(get('cfg.witness').emptyText).toBe('Non collecté — disponible avec les identifiants Prism Element');
     expect(cells('pc.identity')).toContainEqual(['Groupe', 'ops', 'CN=ops,DC=gondor,DC=local', 'LDAP']);
 
     // Ce que seul le PE expose dit pourquoi il manque, au lieu de passer pour « Non configuré ».
@@ -209,6 +236,21 @@ test('PC seul : le document se passe du Prism Element', async () => {
     }
     expect(buildAsBuiltModel({ bundle, lang: 'en' }).sections.find(x => x.id === 'cfg.ha').emptyText)
       .toBe('Not collected — available with Prism Element credentials');
+  } finally { prism.stop(); }
+});
+
+test('Flow Virtual Networking : interrogé seulement avec des VPC, sans secret', async () => {
+  const prism = startFakePrism({ vpcs: true });
+  try {
+    const bundle = await collectPcBundle({ pcHost: prism.host, pcUser: 'admin', pcPass: 'secret', ignoreSSL: true });
+    expect(JSON.stringify(bundle)).not.toMatch(/k-psk|k-bgp/);
+    const fvn = buildAsBuiltModel({ bundle, lang: 'fr', enabled: null }).sections.find(x => x.id === 'pc.fvn');
+    expect(fvn.rows.map(r => r.cells)).toEqual([
+      ['Passerelle', 'gw-vpn', 'vpc-prod', 'UP'],
+      ['VPN', 'vpn-siege', 'gw-vpn ↔ gw-remote', 'UP'],
+      ['BGP', 'bgp-1', 'gw-vpn ↔ gw-remote', 'UP'],
+      ['IP flottante', 'fip-web', '203.0.113.10 → 10.1.0.10', 'ASSOCIATED'],
+    ]);
   } finally { prism.stop(); }
 });
 
