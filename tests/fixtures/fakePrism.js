@@ -4,8 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-// `hosts` nœuds dans le cluster ; `flowEnabled: false` simule Flow Network Security non activé ; `stats.maxInFlight` dit combien de lectures de ports ont été servies en même temps.
-export function startFakePrism({ hosts = 1, flowEnabled = true } = {}) {
+// `hosts` nœuds dans le cluster ; `flowEnabled: false` simule Flow Network Security non activé ; `vpcs: true` déclare un VPC (Flow Virtual Networking) ; `stats.maxInFlight` dit combien de lectures de ports ont été servies en même temps.
+export function startFakePrism({ hosts = 1, flowEnabled = true, vpcs = false } = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'asbuilt-'));
   execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', '/CN=localhost',
     '-keyout', `${dir}/k.pem`, '-out', `${dir}/c.pem`], { stdio: 'ignore' });
@@ -142,6 +142,42 @@ export function startFakePrism({ hosts = 1, flowEnabled = true } = {}) {
       if (pathname.endsWith('/domain-managers/dm-1/backup-targets')) return Response.json({ data: [
         { location: { config: { $objectType: 'prism.v4.management.ClusterReference', extId: 'c-9', name: 'Rohan' } }, lastSyncTime: '2026-11-27T02:00:00Z', isBackupPaused: false },
       ] });
+      // Plan #19 : sections de contexte (PC) et compléments v1 du PE. Secrets en `k-…` : ils ne doivent
+      // jamais atteindre le bundle.
+      if (pathname.endsWith('/config/storage-policies')) return Response.json({ data: [
+        { name: 'gold-storage', categoryExtIds: ['cat-sql'], compressionSpec: { compressionState: 'POSTPROCESS' }, encryptionSpec: { encryptionState: 'ENABLED' }, qosSpec: { throttledIops: 5000 }, faultToleranceSpec: { replicationFactor: 'THREE' } },
+      ] });
+      if (pathname.endsWith('/alerts/user-defined-policies')) return Response.json({ data: [
+        { title: 'CPU VM > 90 %', isEnabled: true, entityType: 'vm', impactTypes: ['PERFORMANCE'], triggerConditions: [{ big: 'x' }] },
+      ] });
+      if (pathname.endsWith('/report/stigs')) return Response.json({ data: [
+        { title: 'SSH root login', ruleId: 'V-1', severity: 'HIGH', status: 'FAILED', fixText: 'k-longtext' },
+        { title: 'Banner', ruleId: 'V-2', severity: 'LOW', status: 'PASSED' },
+      ] });
+      if (pathname.endsWith('/report/security-summaries')) return Response.json({ data: [
+        { clusterExtId: 'c-1', stigSummary: { passedCount: 120, failedCount: 3, notApplicableCount: 10 }, lastRefreshTime: '2026-11-27T00:00:00Z' },
+      ] });
+      if (pathname.endsWith('/config/security-profiles')) return Response.json({ data: [{ clusterExtId: 'c-1', type: 'STIG' }] });
+      if (pathname.endsWith('/content/templates')) return Response.json({ data: [{ templateName: 'tpl-win2022', templateDescription: 'Windows Server 2022' }] });
+      if (pathname.endsWith('/vm-guest-customization-profiles')) return Response.json({ data: [{ name: 'sysprep-fr', description: 'Domaine gondor' }] });
+      if (pathname.endsWith('/images/config/placement-policies')) return Response.json({ data: [{ name: 'iso-paris', placementType: 'SOFT', enforcementState: 'ACTIVE' }] });
+      if (pathname.endsWith('/config/iscsi-clients')) return Response.json({ data: [
+        { iscsiInitiatorName: 'iqn.1991-05.com.microsoft:sql01', clientSecret: 'k-iscsi', enabledAuthentications: 'CHAP', numVirtualTargets: 2, clusterReference: 'c-1' },
+      ] });
+      if (pathname.endsWith('/config/vpcs')) return vpcs ? Response.json({ data: [{ extId: 'vpc-1', name: 'vpc-prod' }] }) : new Response('{}', { status: 404 });
+      if (pathname.endsWith('/config/gateways')) return Response.json({ data: [{ name: 'gw-vpn', vpcReference: 'vpc-1', isActive: true, status: { state: 'UP' }, installedSoftwareVersion: '4.2' }] });
+      if (pathname.endsWith('/config/vpn-connections')) return Response.json({ data: [
+        { name: 'vpn-siege', localGatewayReference: 'gw-vpn', remoteGatewayReference: 'gw-remote', ipsecConfig: { preSharedKey: 'k-psk' }, ipsecTunnelStatus: 'UP' },
+      ] });
+      if (pathname.endsWith('/config/bgp-sessions')) return Response.json({ data: [{ name: 'bgp-1', localGatewayReference: 'gw-vpn', remoteGatewayReference: 'gw-remote', password: 'k-bgp', status: 'UP' }] });
+      if (pathname.endsWith('/config/floating-ips')) return Response.json({ data: [{ name: 'fip-web', floatingIp: { ipv4: { value: '203.0.113.10' } }, privateIp: { ipv4: { value: '10.1.0.10' } }, vpcReference: 'vpc-1', associationStatus: 'ASSOCIATED' }] });
+      if (pathname.endsWith('/config/layer2-stretches')) return Response.json({ data: [] });
+      if (pathname.endsWith('/v1/data_at_rest_encryption')) return Response.json({ softwareEncryptionScope: null, desiredPasswordProtection: false, storageContainerEncryptionStatus: {}, diskEncryptionStatus: {} });
+      if (pathname.endsWith('/v1/cluster/metro_witness')) return Response.json([
+        { witnessName: 'witness-1', clusterName: 'Gondor', ipAddresses: ['10.0.0.60'], nosFullVersion: '7.6', username: 'admin', password: 'k-witness' },
+      ]);
+      if (pathname.endsWith('/v1/cluster/remote_support')) return Response.json({ enable: { enabled: false }, tunnelDetails: { connectionStatus: { status: 'DISCONNECTED' }, httpProxy: { password: 'k-rsproxy' } } });
+      if (pathname.endsWith('/v1/protection_domains/unprotected_vms')) return Response.json({ entities: [{ vmName: 'app-01', hostName: 'gondor-1', powerState: 'on', vdiskNames: ['k-vdisk'] }] });
       if (pathname.endsWith('/config/protection-policies')) return Response.json({ data: [{ name: 'Gold' }] });
       if (pathname.endsWith('/v1/storage_pools')) return Response.json({ entities: [{ name: 'default-storage-pool', storagePoolUuid: 'sp-1', capacity: 2 ** 41 }] });
       if (pathname.endsWith('/v1/vms')) return Response.json({ entities: [{ vmName: 'gondor-1-CVM', controllerVm: true, numVCpus: 8 }] });

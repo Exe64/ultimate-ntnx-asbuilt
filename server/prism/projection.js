@@ -29,6 +29,9 @@ const PC_KEYS = [
   'v4_uplink_bonds', 'v4_vm_host_affinity_policies', 'v4_vm_anti_affinity_policies',
   'v4_legacy_vm_anti_affinity_policies', 'v4_vm_startup_policies', 'v4_authz_policies', 'v4_user_groups',
   'v4_lcm_config', 'v4_snmp_traps', 'v4_rackable_units', 'v4_network_segments', 'v4_storage_config', 'v4_pc_backup_targets',
+  'v4_storage_policies', 'v4_alert_user_policies', 'v4_stigs', 'v4_security_summaries', 'v4_security_profiles',
+  'v4_templates', 'v4_guest_profiles', 'v4_image_placement_policies', 'v4_iscsi_clients',
+  'v4_gateways', 'v4_vpn_connections', 'v4_bgp_sessions', 'v4_floating_ips', 'v4_layer2_stretches',
   'pc_clusters_v3',   // repli quand clustermgmt v4 n'est pas exposé
 ];
 
@@ -40,7 +43,7 @@ const PE_KEYS = [
   'vms_v2', 'networks_v2', 'ha_v2', 'protection_domains_v2', 'pd_status_v2',
   'remote_sites_v2', 'license_v1', 'license_allowances_v1', 'authconfig_v1',
   'auth_types_v1', 'auth_directories_v1', 'snmp_v1', 'alerts_config_v1', 'pulse_v1',
-  'cluster_params_v1', 'cvms_v1',
+  'cluster_params_v1', 'cvms_v1', 'dare_v1', 'metro_witness_v1', 'remote_support_v1', 'unprotected_vms_v1',
 ];
 
 // Où lire la référence de cluster, clé par clé. Les noms de champs diffèrent d'un namespace v4
@@ -63,6 +66,9 @@ const CLUSTER_REF_PATHS = {
   v4_cvms: ['clusterExtId'],
   v4_rackable_units: ['clusterExtId'],
   v4_snmp_traps: ['clusterExtId'],
+  v4_security_summaries: ['clusterExtId'],
+  v4_security_profiles: ['clusterExtId'],
+  v4_iscsi_clients: ['clusterReference'],
   v4_network_segments: ['clusterExtId'],
   v4_storage_config: ['clusterExtId'],
   v4_uplink_bonds: ['clusterReference'],

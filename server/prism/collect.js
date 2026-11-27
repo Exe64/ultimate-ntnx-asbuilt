@@ -69,6 +69,27 @@ const PC_ENDPOINTS = [
   ['v4_authz_policies',      'iam',            '/authz/authorization-policies', { pick: ['extId', 'displayName', 'description', 'role', 'identities', 'entities', 'isSystemDefined', 'assignedUsersCount', 'assignedUserGroupsCount'] }],
   ['v4_user_groups',         'iam',            '/authn/user-groups'],
   ['v4_lcm_config',          'lifecycle',      '/resources/config', { single: true }],
+  // Plan #19 — sections de contexte. Champs choisis (`pick`) : plusieurs objets portent des secrets que
+  // `scrub` ne reconnaît pas toujours (IPsec d'un VPN), ou des textes volumineux (correctifs STIG).
+  ['v4_storage_policies',    'datapolicies',   '/config/storage-policies', { absentOk: true, pick: ['name', 'categoryExtIds', 'compressionSpec', 'encryptionSpec', 'qosSpec', 'faultToleranceSpec', 'policyType'] }],
+  ['v4_alert_user_policies', 'monitoring',     '/serviceability/alerts/user-defined-policies', { pick: ['title', 'description', 'isEnabled', 'isAutoResolved', 'entityType', 'impactTypes'] }],
+  ['v4_stigs',               'security',       '/report/stigs', { absentOk: true, pick: ['title', 'ruleId', 'severity', 'status', 'affectedClusters'] }],
+  ['v4_security_summaries',  'security',       '/report/security-summaries', { absentOk: true, pick: ['clusterExtId', 'stigSummary', 'passwordSummary', 'lastRefreshTime'] }],
+  ['v4_security_profiles',   'security',       '/config/security-profiles', { absentOk: true, pick: ['clusterExtId', 'type'] }],
+  ['v4_templates',           'vmm',            '/content/templates', { pick: ['templateName', 'templateDescription', 'createTime'] }],
+  ['v4_guest_profiles',      'vmm',            '/ahv/config/vm-guest-customization-profiles', { absentOk: true, pick: ['name', 'description'] }],
+  ['v4_image_placement_policies', 'vmm',       '/images/config/placement-policies', { pick: ['name', 'description', 'placementType', 'enforcementState'] }],
+  ['v4_iscsi_clients',       'volumes',        '/config/iscsi-clients', { pick: ['iscsiInitiatorName', 'enabledAuthentications', 'numVirtualTargets', 'clusterReference', 'attachmentSite'] }],
+];
+
+// Flow Virtual Networking (plan #19) : interrogé seulement quand le PC déclare des VPC. Les tables de
+// routage ne sont pas lues : leurs routes demandent un appel par table, pour peu d'information.
+const FVN_ENDPOINTS = [
+  ['v4_gateways',            'networking',     '/config/gateways', { pick: ['name', 'vpcReference', 'isActive', 'status', 'installedSoftwareVersion', 'gatewayDeviceVendor'] }],
+  ['v4_vpn_connections',     'networking',     '/config/vpn-connections', { pick: ['name', 'localGatewayReference', 'remoteGatewayReference', 'localGatewayRole', 'ipsecTunnelStatus', 'ebgpStatus'] }],
+  ['v4_bgp_sessions',        'networking',     '/config/bgp-sessions', { pick: ['name', 'localGatewayReference', 'remoteGatewayReference', 'status', 'dynamicRoutePriority'] }],
+  ['v4_floating_ips',        'networking',     '/config/floating-ips', { pick: ['name', 'floatingIp', 'privateIp', 'vpcReference', 'associationStatus'] }],
+  ['v4_layer2_stretches',    'networking',     '/config/layer2-stretches', { pick: ['name', 'connectionType', 'stretchStatus', 'mtu', 'vni'] }],
 ];
 
 // ─── Prism Element (v2 / v1) ──────────────────────────────────────────────────
@@ -95,6 +116,19 @@ const PE_ENDPOINTS = [
   // vCPU des CVM : ni la v2 (/vms exclut les CVM) ni la v4 (`numVcpus` vaut 1 pour 4 vCPU sur
   // pc.7.6) ne le donnent juste ; la v1 filtrée sur les CVM, oui.
   ['cvms_v1',                'prism.v1', '/vms',                  { list: true, params: { filterCriteria: 'is_cvm==1' } }],
+  // Plan #19 — formes relevées dans les déclarations Swagger 1.2 d'AOS 7.6.0.6 (dépôt NutanixAPISwaggers).
+  // `pick` ne garde que ce que le document dit : le Witness porte `username`/`password`, le tunnel de
+  // support un proxy (identifiants possibles), une VM des dizaines de champs.
+  ['dare_v1',                'prism.v1', '/data_at_rest_encryption', { pick: (d) => ({
+    softwareEncryptionScope: d?.softwareEncryptionScope ?? null, desiredPasswordProtection: d?.desiredPasswordProtection ?? null,
+    PCKeyManagerStatus: d?.PCKeyManagerStatus ?? null, storageContainerEncryptionStatus: d?.storageContainerEncryptionStatus ?? null,
+    diskEncryptionStatus: d?.diskEncryptionStatus ?? null }) }],
+  ['metro_witness_v1',       'prism.v1', '/cluster/metro_witness', { pick: (d) => ({ entities: (Array.isArray(d) ? d : d?.entities || []).map(w => ({
+    witnessName: w.witnessName, clusterName: w.clusterName, ipAddresses: w.ipAddresses, nosFullVersion: w.nosFullVersion || w.nosVersion, markedForRemoval: w.markedForRemoval })) }) }],
+  ['remote_support_v1',      'prism.v1', '/cluster/remote_support', { pick: (d) => ({
+    enabled: d?.enable?.enabled ?? null, duration: d?.enable?.duration ?? null, connectionStatus: d?.tunnelDetails?.connectionStatus?.status ?? d?.tunnelDetails?.connectionStatus ?? null }) }],
+  ['unprotected_vms_v1',     'prism.v1', '/protection_domains/unprotected_vms', { pick: (d) => ({ entities: (Array.isArray(d) ? d : d?.entities || []).map(v => ({
+    vmName: v.vmName, hostName: v.hostName, powerState: v.powerState })) }) }],
 ];
 
 const errorOf = (err) => ({
@@ -145,6 +179,27 @@ async function gather(tasks) {
   return { data, errors, collectors: { ok: Object.keys(data).length, total: tasks.length } };
 }
 
+/** Une tâche de collecte PC v4 : liste paginée, objet seul (`single`), champs choisis (`pick`). */
+const pcTask = (client) => ([key, ns, path, opts = {}]) => ({
+  key,
+  run: async () => {
+    try {
+      if (opts.single) {
+        const r = await client.get(await compat.url(client, `prism.v4/${ns}`, path, { api: 'prism.v4' }));
+        return { data: r.data?.data ? [r.data.data] : [] };
+      }
+      const list = await listAll(client, `prism.v4/${ns}`, { suffix: path, pageSize: 100 });
+      return { data: opts.pick ? list.map(x => Object.fromEntries(opts.pick.filter(k => x[k] !== undefined).map(k => [k, x[k]]))) : list };
+    }
+    // ponytail: un service déployé mais tombé répond aussi 503 et passerait pour « aucun » ; le
+    // distinguer demanderait d'interroger le gestionnaire du service.
+    catch (err) {
+      if (opts.absentOk && [404, 503, ...(opts.absentStatus || [])].includes(err.response?.status)) return { data: [] };
+      throw err;
+    }
+  },
+});
+
 /**
  * Collecte Prism Central. `client` est le client axios du PC (buildClient).
  * Les hôtes sont relus cluster par cluster quand la liste à plat ne porte pas de référence de
@@ -154,25 +209,18 @@ async function gather(tasks) {
 async function collectPc(client) {
   // Avant toute sonde `unversioned/info` d'apiCompat : elles aussi s'authentifient.
   await checkAuth(client, '/api/nutanix/v3/users/me');
-  const out = await gather(PC_ENDPOINTS.map(([key, ns, path, opts = {}]) => ({
-    key,
-    run: async () => {
-      try {
-        if (opts.single) {
-          const r = await client.get(await compat.url(client, `prism.v4/${ns}`, path, { api: 'prism.v4' }));
-          return { data: r.data?.data ? [r.data.data] : [] };
-        }
-        const list = await listAll(client, `prism.v4/${ns}`, { suffix: path, pageSize: 100 });
-        return { data: opts.pick ? list.map(x => Object.fromEntries(opts.pick.filter(k => x[k] !== undefined).map(k => [k, x[k]]))) : list };
-      }
-      // ponytail: un service déployé mais tombé répond aussi 503 et passerait pour « aucun » ; le
-      // distinguer demanderait d'interroger le gestionnaire du service.
-      catch (err) {
-        if (opts.absentOk && [404, 503, ...(opts.absentStatus || [])].includes(err.response?.status)) return { data: [] };
-        throw err;
-      }
-    },
-  })));
+  const out = await gather(PC_ENDPOINTS.map(pcTask(client)));
+
+  // Flow Virtual Networking : une seconde vague, seulement quand des VPC existent.
+  if ((out.data.v4_vpcs?.data || []).length) {
+    const fvn = await gather(FVN_ENDPOINTS.map(pcTask(client)));
+    Object.assign(out.data, fvn.data);
+    out.errors.push(...fvn.errors);
+    out.collectors.ok += fvn.collectors.ok; out.collectors.total += fvn.collectors.total;
+  } else if (out.data.v4_vpcs) {
+    // VPC lus et aucun : FVN n'est pas configuré, ce n'est pas une donnée manquante.
+    for (const [key] of FVN_ENDPOINTS) out.data[key] = { data: [] };
+  }
 
   const clusters = (out.data.v4_clusters?.data || []).filter(c => c.extId && !isPrismCentral(c));
   const hostsFlat = out.data.v4_hosts?.data || [];
@@ -295,7 +343,7 @@ async function collectPe(peClient) {
       const r = await peClient.get(await compat.url(peClient, api, path), opts.params ? { params: opts.params } : undefined);
       // Les endpoints de liste v2 répondent {entities:[…]} : on garde la forme telle quelle,
       // c'est celle que le snapshot d'audit produit et que le modèle sait lire.
-      return r.data;
+      return opts.pick ? opts.pick(r.data) : r.data;
     },
   })));
 
