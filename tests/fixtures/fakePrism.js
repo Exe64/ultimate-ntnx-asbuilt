@@ -38,7 +38,7 @@ export function startFakePrism({ hosts = 1, flowEnabled = true } = {}) {
         // Vitesses différentes selon l'API, pour vérifier que la v4 l'emporte.
         return Response.json(pathname.includes('/v2.0/')
           ? [{ name: 'eth0', link_speed_in_kbps: 10000000 }]
-          : { data: [{ name: 'eth0', linkSpeedInKbps: 25000000, linkCapacityInMbps: 25000, interfaceStatus: 1 }] });
+          : { data: [{ extId: 'nic-1', name: 'eth0', linkSpeedInKbps: 25000000, linkCapacityInMbps: 25000, interfaceStatus: 1 }] });
       }
       if (pathname.endsWith('/config/hosts')) return Response.json({
         // Un hôte v4 désigne son cluster par `cluster.uuid` sur pc.7.6 (et non `cluster.extId`).
@@ -57,7 +57,9 @@ export function startFakePrism({ hosts = 1, flowEnabled = true } = {}) {
         { name: 'PCVM-1', cluster: { extId: 'c-1' }, numSockets: 6, numCoresPerSocket: 1, memorySizeBytes: 26 * 2 ** 30,
           nics: [{ networkInfo: { ipv4Config: { ipAddress: { value: '10.0.0.50' } } } }] },
       ] });
-      if (pathname.endsWith('/config/clusters/c-1/snmp')) return Response.json({ data: { isEnabled: true, users: [{ username: 'snmpuser', authType: 'SHA', authKey: 'k-auth', privType: 'AES', privKey: 'k-priv' }] } });
+      if (pathname.endsWith('/config/clusters/c-1/snmp')) return Response.json({ data: { isEnabled: true, users: [{ username: 'snmpuser', authType: 'SHA', authKey: 'k-auth', privType: 'AES', privKey: 'k-priv' }],
+        traps: [{ address: { ipv4: { value: '10.0.0.30' } }, port: 162, protocol: 'UDP', version: 'V3', username: 'snmpuser', recieverName: 'nms', communityString: 'k-community', engineId: 'k-engine' }],
+        transports: [{ protocol: 'UDP', port: 161 }] } });
       // Plan #6 : syslog et certificat par cluster, images et services au niveau du PC. VPC et Objects
       // absents (404) : un service non déployé se dit « Non configuré ».
       if (pathname.endsWith('/config/clusters/c-1/rsyslog-servers')) return Response.json({ data: [
@@ -101,6 +103,45 @@ export function startFakePrism({ hosts = 1, flowEnabled = true } = {}) {
       } });
       if (pathname.endsWith('/config/key-management-servers')) return Response.json({ data: [{ name: 'kms-gondor', clientSecret: 'k-kms' }] });
       if (pathname.endsWith('/authn/saml-identity-providers')) return Response.json({ data: [{ name: 'adfs', idpMetadataUrl: 'https://adfs.gondor.local/metadata' }] });
+      // Plan #18 : formes de la spec (networking, vmm, iam, lifecycle, clustermgmt, prism).
+      if (pathname.endsWith('/config/uplink-bonds')) return Response.json({ data: [
+        { name: 'br0-up', type: 'BALANCE_TCP', lacpStatus: 'NEGOTIATED', clusterReference: 'c-1', hostReference: 'h-1', hostNicReferences: [{ extId: 'nic-1' }], virtualSwitchInfo: { name: 'vs0' } },
+      ] });
+      if (pathname.endsWith('/config/categories')) return Response.json({ data: [
+        { extId: 'cat-sql', key: 'App', value: 'SQL' }, { extId: 'cat-dc', key: 'App', value: 'AD' }, { extId: 'cat-h', key: 'Hosts', value: 'Fast' },
+      ] });
+      if (pathname.endsWith('/ahv/policies/vm-host-affinity-policies')) return Response.json({ data: [
+        { name: 'sql-on-fast', vmCategories: [{ extId: 'cat-sql' }], hostCategories: [{ extId: 'cat-h' }], numVms: 2, numHosts: 1, numCompliantVms: 2, numNonCompliantVms: 0 },
+      ] });
+      if (pathname.endsWith('/ahv/policies/vm-anti-affinity-policies')) return Response.json({ data: [
+        { name: 'ad-split', categories: [{ extId: 'cat-dc' }], numCompliantVms: 2, numNonCompliantVms: 0 },
+      ] });
+      if (pathname.endsWith('/ahv/policies/legacy-vm-anti-affinity-policies')) return Response.json({ data: [
+        { name: 'legacy-ad', cluster: { extId: 'c-1' }, vms: [{ extId: 'vm-1' }, { extId: 'vm-2' }] },
+      ] });
+      if (pathname.endsWith('/ahv/policies/vm-startup-policies')) return Response.json({ data: [
+        { name: 'boot-order', groups: [{ categories: [{ extId: 'cat-dc' }] }, { categories: [{ extId: 'cat-sql' }] }], startConditions: [{ powerStateCriteria: 'ON', delayDurationSecs: 60 }] },
+      ] });
+      if (pathname.endsWith('/authz/authorization-policies')) return Response.json({ data: [
+        { displayName: 'ops-admins', role: 'role-ops', identities: [{}], entities: [{}], isSystemDefined: false, assignedUsersCount: 0, assignedUserGroupsCount: 1, authorizationPolicyType: 'USER_DEFINED', clientName: 'k-client' },
+        { displayName: 'Super Admin', isSystemDefined: true },
+      ] });
+      if (pathname.endsWith('/authn/user-groups')) return Response.json({ data: [{ name: 'ops', groupType: 'LDAP', distinguishedName: 'CN=ops,DC=gondor,DC=local' }] });
+      if (pathname.endsWith('/lifecycle/v4.0/resources/config')) return Response.json({ data: {
+        url: 'https://download.nutanix.com/lcm/2.0', isAutoInventoryEnabled: true, autoInventorySchedule: '03:00', version: '3.1', connectivityType: 'CONNECTED_SITE', isHttpsEnabled: true,
+      } });
+      if (pathname.endsWith('/config/clusters/c-1/rackable-units')) return Response.json({ data: [
+        { id: 1, serial: 'BLK-1', model: 'NX', modelName: 'NX-8155-G9', nodes: [{ uuid: 'h-1', position: 1 }], rack: { id: 1 } },
+      ] });
+      if (pathname.endsWith('/config/clusters/c-1/network-segments')) return Response.json({ data: [
+        { name: 'backplane', serviceName: 'BACKPLANE', vlanId: 3000, mtu: 9000, cvmNetworkSegmentInterfaceName: 'eth2' },
+      ] });
+      if (pathname.endsWith('/config/clusters/c-1/storage-config')) return Response.json({ data: {
+        resilientCapacityWarningThresholdPercentage: 75, isRebuildReservationEnabled: true, isRf1Enabled: false, storageOverProvisioningCautionThreshold: 150, isDelayedMaintenanceResiliencyEnabled: false,
+      } });
+      if (pathname.endsWith('/domain-managers/dm-1/backup-targets')) return Response.json({ data: [
+        { location: { config: { $objectType: 'prism.v4.management.ClusterReference', extId: 'c-9', name: 'Rohan' } }, lastSyncTime: '2026-11-27T02:00:00Z', isBackupPaused: false },
+      ] });
       if (pathname.endsWith('/config/protection-policies')) return Response.json({ data: [{ name: 'Gold' }] });
       if (pathname.endsWith('/v1/storage_pools')) return Response.json({ entities: [{ name: 'default-storage-pool', storagePoolUuid: 'sp-1', capacity: 2 ** 41 }] });
       if (pathname.endsWith('/v1/vms')) return Response.json({ entities: [{ vmName: 'gondor-1-CVM', controllerVm: true, numVCpus: 8 }] });

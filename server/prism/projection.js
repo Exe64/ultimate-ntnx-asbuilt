@@ -26,6 +26,9 @@ const PC_KEYS = [
   'v4_file_servers', 'v4_object_stores', 'v4_volume_groups',
   'v4_host_nics', 'v4_cvms', 'v4_license_entitlements', 'v4_license_compliances', 'v4_recovery_plans',
   'v4_key_management_servers', 'v4_saml_identity_providers', 'v4_alert_email_config',
+  'v4_uplink_bonds', 'v4_vm_host_affinity_policies', 'v4_vm_anti_affinity_policies',
+  'v4_legacy_vm_anti_affinity_policies', 'v4_vm_startup_policies', 'v4_authz_policies', 'v4_user_groups',
+  'v4_lcm_config', 'v4_snmp_traps', 'v4_rackable_units', 'v4_network_segments', 'v4_storage_config', 'v4_pc_backup_targets',
   'pc_clusters_v3',   // repli quand clustermgmt v4 n'est pas exposé
 ];
 
@@ -58,6 +61,12 @@ const CLUSTER_REF_PATHS = {
   v4_ssl_certificates: ['clusterExtId'],
   v4_host_nics: ['clusterExtId'],
   v4_cvms: ['clusterExtId'],
+  v4_rackable_units: ['clusterExtId'],
+  v4_snmp_traps: ['clusterExtId'],
+  v4_network_segments: ['clusterExtId'],
+  v4_storage_config: ['clusterExtId'],
+  v4_uplink_bonds: ['clusterReference'],
+  v4_legacy_vm_anti_affinity_policies: ['cluster.extId'],
   // Licences : chaque entrée EST un cluster (son extId), le PC compris.
   v4_license_entitlements: ['extId'],
   v4_license_compliances: ['extId'],

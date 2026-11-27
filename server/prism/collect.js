@@ -57,6 +57,18 @@ const PC_ENDPOINTS = [
   ['v4_saml_identity_providers', 'iam',        '/authn/saml-identity-providers'],
   // La configuration e-mail des alertes est celle du PC, et un objet, pas une liste : pas de pagination.
   ['v4_alert_email_config',  'monitoring',     '/serviceability/alerts/email-config', { single: true }],
+  // Plan #18 — servis sous le préfixe v4.0 par pc.7.6.0.10 (dépôt NutanixAPISwaggers, checks/).
+  ['v4_uplink_bonds',        'networking',     '/config/uplink-bonds'],
+  ['v4_vm_host_affinity_policies', 'vmm',      '/ahv/policies/vm-host-affinity-policies'],
+  ['v4_vm_anti_affinity_policies', 'vmm',      '/ahv/policies/vm-anti-affinity-policies'],
+  ['v4_legacy_vm_anti_affinity_policies', 'vmm', '/ahv/policies/legacy-vm-anti-affinity-policies'],
+  // Politiques de démarrage : pc.7.5 et plus ; un PC antérieur répond 404, qui vaut « aucune ».
+  ['v4_vm_startup_policies', 'vmm',            '/ahv/policies/vm-startup-policies', { absentOk: true }],
+  // Politiques d'autorisation : ce qu'un as-built en dit (nom, rôle, identités, périmètre), pas plus —
+  // le reste est volumineux et inutile au document.
+  ['v4_authz_policies',      'iam',            '/authz/authorization-policies', { pick: ['extId', 'displayName', 'description', 'role', 'identities', 'entities', 'isSystemDefined', 'assignedUsersCount', 'assignedUserGroupsCount'] }],
+  ['v4_user_groups',         'iam',            '/authn/user-groups'],
+  ['v4_lcm_config',          'lifecycle',      '/resources/config', { single: true }],
 ];
 
 // ─── Prism Element (v2 / v1) ──────────────────────────────────────────────────
@@ -150,7 +162,8 @@ async function collectPc(client) {
           const r = await client.get(await compat.url(client, `prism.v4/${ns}`, path, { api: 'prism.v4' }));
           return { data: r.data?.data ? [r.data.data] : [] };
         }
-        return { data: await listAll(client, `prism.v4/${ns}`, { suffix: path, pageSize: 100 }) };
+        const list = await listAll(client, `prism.v4/${ns}`, { suffix: path, pageSize: 100 });
+        return { data: opts.pick ? list.map(x => Object.fromEntries(opts.pick.filter(k => x[k] !== undefined).map(k => [k, x[k]]))) : list };
       }
       // ponytail: un service déployé mais tombé répond aussi 503 et passerait pour « aucun » ; le
       // distinguer demanderait d'interroger le gestionnaire du service.
@@ -187,16 +200,39 @@ async function collectPc(client) {
     out.collectors.ok += 1;
   } catch (err) { out.errors.push({ key: 'v4_domain_managers', ...errorOf(err) }); }
 
+  // Cibles de sauvegarde du PC (plan #18) : une liste par domain-manager.
+  const dms = (out.data.v4_domain_managers?.data || []).filter(dm => dm.extId);
+  if (dms.length) {
+    out.collectors.total += 1;
+    try {
+      const lists = await Promise.all(dms.map(dm => listAll(client, 'prism.v4/prism', { suffix: `/management/domain-managers/${dm.extId}/backup-targets` })
+        .then(l => l.map(t => ({ ...t, domainManagerExtId: dm.extId })))));
+      out.data.v4_pc_backup_targets = { data: lists.flat() };
+      out.collectors.ok += 1;
+    } catch (err) { out.errors.push({ key: 'v4_pc_backup_targets', ...errorOf(err) }); }
+  }
+
   // SNMP, syslog et certificat n'ont pas de liste à plat : ils se lisent cluster par cluster.
   // SNMP : les utilisateurs seuls, jamais leurs clés d'authentification ni de chiffrement.
   await perCluster(client, out, clusters, 'v4_snmp', '/snmp',
     (d) => (d?.users || []).map(u => ({ username: u.username, authType: u.authType, privType: u.privType })));
+  // Destinations des traps (plan #18), jamais leur chaîne de communauté ni leur engine ID : `scrub` ne
+  // reconnaît pas `communityString`. Second appel au même chemin, pour garder `v4_snmp` = utilisateurs.
+  // ponytail: un GET /snmp de plus par cluster ; à fusionner si un parc de centaines de clusters le sent.
+  await perCluster(client, out, clusters, 'v4_snmp_traps', '/snmp', (d) => [
+    ...(d?.traps || []).map(t => ({ kind: 'trap', address: t.address, port: t.port, protocol: t.protocol, version: t.version, username: t.username, receiver: t.recieverName, inform: t.shouldInform })),
+    ...(d?.transports || []).map(t => ({ kind: 'transport', protocol: t.protocol, port: t.port })),
+  ]);
   await perCluster(client, out, clusters, 'v4_rsyslog', '/rsyslog-servers', (d) => d || []);
   // Certificat SSL (clustermgmt v4.2+) : la réponse porte la clé privée ; on n'en garde que ce
   // qu'on lit dans le certificat public.
   await perCluster(client, out, clusters, 'v4_ssl_certificates', '/ssl-certificate', (d) => (d ? [certInfo(d)] : []));
   // Dimensionnement des CVM (mémoire ; le nombre de vCPU reste à confronter au Prism Element).
   await perCluster(client, out, clusters, 'v4_cvms', '/cvms', (d) => d || []);
+  // Plan #18 : blocs, segmentation réseau et configuration de stockage (ces deux dernières : pc.7.6).
+  await perCluster(client, out, clusters, 'v4_rackable_units', '/rackable-units', (d) => d || []);
+  await perCluster(client, out, clusters, 'v4_network_segments', '/network-segments', (d) => d || []);
+  await perCluster(client, out, clusters, 'v4_storage_config', '/storage-config', (d) => (d ? [d] : []));
   out.data = scrub(out.data);
   return out;
 }
