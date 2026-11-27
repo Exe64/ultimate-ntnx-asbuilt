@@ -330,6 +330,43 @@ const PC_SECTIONS = [
     },
   },
   {
+    id: 'pc.recoveryplans', chapter: 'pc', kind: 'table',
+    title: { fr: 'Plans de reprise', en: 'Recovery Plans' },
+    keys: ['v4_recovery_plans'],
+    build: (ctx) => {
+      const plans = ctx.pc.list('v4_recovery_plans');
+      if (!plans.length) return null;
+      const names = new Map(ctx.pc.list('v4_clusters').map(c => [c.extId, c.name]));
+      const site = (loc) => (loc?.clusters || []).map(c => names.get(c.extId) || c.extId).join(', ')
+        || (loc?.domainManagerExtId ? (ctx.lang === 'en' ? 'remote Prism Central' : 'Prism Central distant') : '');
+      return {
+        columns: [
+          { fr: 'Nom', en: 'Name' }, { fr: 'Site principal', en: 'Primary Location' },
+          { fr: 'Site de reprise', en: 'Recovery Location' }, { fr: 'Description', en: 'Description' },
+        ],
+        rows: plans.map(p => ctx.row([p.name, site(p.primaryLocation), site(p.recoveryLocation), p.description || ''], 'api')),
+      };
+    },
+  },
+  {
+    id: 'pc.alerts', chapter: 'pc', kind: 'kv',
+    title: { fr: 'Alertes par e-mail', en: 'Alert Email Configuration' },
+    keys: ['v4_alert_email_config'],
+    build: (ctx) => {
+      const cfg = ctx.pc.list('v4_alert_email_config')[0];
+      if (!cfg) return null;
+      return {
+        rows: [
+          ctx.kv({ fr: 'Alertes par e-mail', en: 'Email Alerts' }, ctx.f.bool(cfg.isEnabled), null),
+          ctx.kv({ fr: 'Digest quotidien', en: 'Email Digest Enabled' }, ctx.f.bool(cfg.isEmailDigestEnabled), null),
+          ctx.kv({ fr: 'Destinataires', en: 'Email Contact List' }, ctx.f.joinList(cfg.emailContactList), null),
+          ctx.kv({ fr: 'Copie au support Nutanix', en: 'Nutanix Support Copy' }, cfg.hasDefaultNutanixEmail ? cfg.defaultNutanixEmail : ctx.f.bool(false), null),
+          ...(cfg.tunnelDetails?.connectionStatus?.status ? [ctx.kv({ fr: 'Liaison avec Nutanix', en: 'Nutanix Connection' }, ctx.f.label(cfg.tunnelDetails.connectionStatus.status), null)] : []),
+        ],
+      };
+    },
+  },
+  {
     id: 'pc.licensing', chapter: 'pc', kind: 'table',
     title: { fr: 'Licences', en: 'Licensing' },
     keys: ['v4_license_keys'],
@@ -499,19 +536,23 @@ const SEC_SECTIONS = [
   {
     id: 'sec.directories', chapter: 'sec', kind: 'table',
     title: { fr: "Configuration d'authentification", en: 'Authentication Configuration' },
-    keys: ['v4_directory_services'],
+    keys: ['v4_directory_services', 'v4_saml_identity_providers'],
     build: (ctx) => {
       const dirs = ctx.pc.list('v4_directory_services');
-      if (!dirs.length) return null;
+      const saml = ctx.pc.list('v4_saml_identity_providers');
+      if (!dirs.length && !saml.length) return null;
       return {
         columns: [
           { fr: 'Annuaire', en: 'Directory' }, { fr: 'Type', en: 'Type' },
           { fr: 'Domaine', en: 'Domain' }, { fr: 'URL', en: 'URL' },
           { fr: 'Compte de service', en: 'Service Account' },
         ],
-        rows: dirs.map(d => ctx.row([
-          d.name, ctx.f.label(d.directoryType), d.domainName, d.url, d.serviceAccount?.username,
-        ], 'api')),
+        rows: [
+          ...dirs.map(d => ctx.row([
+            d.name, ctx.f.label(d.directoryType), d.domainName, d.url, d.serviceAccount?.username,
+          ], 'api')),
+          ...saml.map(i => ctx.row([i.name, 'SAML', '', i.idpMetadataUrl || i.redirectURL || '', ''], 'api')),
+        ],
       };
     },
   },
@@ -914,14 +955,29 @@ const CFG_SECTIONS = [
   {
     id: 'cfg.licensing', chapter: 'cfg', kind: 'kv',
     title: { fr: 'Licences du cluster', en: 'Cluster License' },
+    keys: ['v4_license_entitlements', 'v4_license_compliances', 'license_v1'],
     build: (ctx) => {
+      // v4 (licensing) d'abord : droits et conformité par cluster ; la v1 du PE complète.
       const lic = ctx.cluster.one('license_v1') || {};
+      const ent = ctx.cluster.list('v4_license_entitlements')[0];
+      const services = ctx.cluster.list('v4_license_compliances')[0]?.services || [];
+      const en = ctx.lang === 'en';
+      const rights = (ent?.details || []).map(d => [d.name || ctx.f.label(d.category), d.earliestExpiryDate && `${en ? 'expires' : 'échéance'} ${d.earliestExpiryDate}`].filter(Boolean).join(', '));
+      const compliance = services.map(sv => `${sv.name} : ${ctx.f.label(sv.licenseType)}, ${sv.isCompliant ? (en ? 'compliant' : 'conforme') : (en ? 'not compliant' : 'non conforme')}`);
+      // Lignes propres à la v1 : vides sans PE dès que la v4 a répondu, donc omises dans ce cas.
+      const v1Rows = (rows) => (ctx.cluster.one('license_v1') || !(ent || services.length) ? rows : []);
+      const violations = services.flatMap(sv => (sv.violations || []).map(v => `${ctx.f.label(v.type)}${v.startDate ? ` (${en ? 'since' : 'depuis le'} ${v.startDate})` : ''}`));
       return {
         rows: [
-          ctx.kv({ fr: 'Licence', en: 'License' }, lic.licenseName || lic.category, ctx.plan('nciLicense')),
-          ctx.kv({ fr: 'Type', en: 'License Type' }, lic.licenseType || lic.type, null),
-          ctx.kv({ fr: 'Numéro de série du bloc', en: 'Block Serial Number' }, lic.blockSerial, null),
-          ctx.kv({ fr: 'Échéance', en: 'Expiration' }, lic.expiryDate || lic.expiration, null),
+          ctx.kv({ fr: 'Licence', en: 'License' }, rights.join(' ; ') || lic.licenseName || lic.category, ctx.plan('nciLicense')),
+          ...v1Rows([ctx.kv({ fr: 'Type', en: 'License Type' }, lic.licenseType || lic.type, null)]),
+          ctx.kv({ fr: 'Enregistré', en: 'Registered' }, ent ? ctx.f.bool(ent.isRegistered) : null, null),
+          ctx.kv({ fr: 'Conformité', en: 'Compliance' }, compliance.join(' ; ') || null, null),
+          ctx.kv({ fr: 'Violations', en: 'Violations' }, violations.join(' ; ') || null, null),
+          ...v1Rows([
+            ctx.kv({ fr: 'Numéro de série du bloc', en: 'Block Serial Number' }, lic.blockSerial, null),
+            ctx.kv({ fr: 'Échéance', en: 'Expiration' }, lic.expiryDate || lic.expiration, null),
+          ]),
           ctx.kv({ fr: 'Licence NCM', en: 'NCM license' }, null, ctx.plan('ncmLicense')),
         ],
       };
@@ -971,9 +1027,17 @@ const CFG_SECTIONS = [
   {
     id: 'cfg.pools', chapter: 'cfg', kind: 'table',
     title: { fr: 'Pools de stockage', en: 'Storage Pools' },
-    keys: ['storage_pools_v2'],
+    keys: ['v4_disks', 'storage_pools_v2'],
     build: (ctx) => {
-      const pools = ctx.cluster.list('storage_pools_v2');
+      // La v4 n'a pas d'objet pool : identifiant, capacité et nombre de disques viennent des disques
+      // v4 ; le nom et le seuil ILM, du Prism Element quand il est fourni.
+      const v2 = ctx.cluster.list('storage_pools_v2');
+      const pools = ctx.cluster.storagePools.length
+        ? ctx.cluster.storagePools.map(p => {
+          const pe = v2.find(x => (x.storagePoolUuid || x.uuid) === p.id) || (v2.length === 1 && ctx.cluster.storagePools.length === 1 ? v2[0] : {});
+          return { ...pe, storagePoolUuid: p.id, capacity: pe.capacity ?? (p.capacityTb != null ? p.capacityTb * 1024 ** 4 : null) };
+        })
+        : v2;
       if (!pools.length) return null;
       return {
         columns: [
@@ -1030,12 +1094,11 @@ const CFG_SECTIONS = [
   {
     id: 'cfg.cvm', chapter: 'cfg', kind: 'table',
     title: { fr: 'Configuration des CVMs', en: 'Controller VM Settings' },
-    keys: ['v4_hosts', 'hosts_v2', 'vms_v2'],
-    // Mémoire et vCPU d'une CVM ne sont publiés nulle part côté plateforme : l'inventaire /vms
-    // d'un Prism Element exclut les machines de contrôle, `v4_hosts.controllerVm` ne porte que des
-    // adresses, et vmm v4 ne connaît pas les CVM. Quand le cluster les rend quand même, l'API fait
-    // foi comme partout ailleurs ; sinon la saisie du Build prend le relais, sans quoi les deux
-    // colonnes resteraient vides sur la majorité des clusters.
+    keys: ['v4_cvms', 'v4_hosts', 'hosts_v2', 'vms_v2'],
+    // La mémoire d'une CVM se lit dans clustermgmt v4 (`/clusters/{id}/cvms`). Son vCPU, non : le
+    // `numVcpus` v4 n'est pas fiable (cf. normalize.js), il vient du Prism Element quand il est
+    // fourni. Ce que l'API ne rend pas, la saisie du Build le complète, sans quoi la colonne
+    // resterait vide sur la majorité des clusters.
     build: (ctx) => ({
       columns: [
         { fr: 'CVM', en: 'CVM' }, { fr: 'Mémoire', en: 'Memory' },
@@ -1055,7 +1118,8 @@ const CFG_SECTIONS = [
     keys: ['snmp_v1', 'v4_snmp'],
     build: (ctx) => {
       const snmp = ctx.cluster.one('snmp_v1') || {};
-      const users = snmp.snmpUsers || snmp.users || ctx.cluster.list('v4_snmp');   // v1 : `snmpUsers`
+      const v4 = ctx.cluster.list('v4_snmp');
+      const users = v4.length ? v4 : (snmp.snmpUsers || snmp.users || []);   // v1 : `snmpUsers`
       if (!users.length) return null;
       return {
         columns: [{ fr: 'Utilisateur', en: 'Username' }, { fr: 'Confidentialité', en: 'Privacy Type' }, { fr: 'Authentification', en: 'Auth Type' }],
@@ -1066,16 +1130,20 @@ const CFG_SECTIONS = [
   {
     id: 'cfg.smtp', chapter: 'cfg', kind: 'kv',
     title: { fr: 'SMTP', en: 'SMTP' },
-    keys: ['cluster_v2'],
+    keys: ['v4_clusters', 'cluster_v2'],
     build: (ctx) => {
-      const smtp = ctx.cluster.one('cluster_v2')?.smtp_server;
-      if (!smtp) return null;
+      const v4 = ctx.cluster.list('v4_clusters')[0]?.network?.smtpServer;
+      const v2 = ctx.cluster.one('cluster_v2')?.smtp_server;
+      if (!v4?.server && !v2) return null;
+      const smtp = v4?.server
+        ? { address: addr(v4.server.ipAddress), port: v4.server.port, mode: v4.type, from: v4.emailAddress }
+        : { address: v2.address, port: v2.port, mode: v2.secure_mode, from: v2.from_email_address };
       return {
         rows: [
           ctx.kv({ fr: 'Serveur', en: 'Host Name' }, smtp.address, null),
           ctx.kv({ fr: 'Port', en: 'Port' }, smtp.port, null),
-          ctx.kv({ fr: 'Sécurité', en: 'Security Mode' }, ctx.f.label(smtp.secure_mode), null),
-          ctx.kv({ fr: 'Expéditeur', en: 'From Email Address' }, smtp.from_email_address, null),
+          ctx.kv({ fr: 'Sécurité', en: 'Security Mode' }, ctx.f.label(smtp.mode), null),
+          ctx.kv({ fr: 'Expéditeur', en: 'From Email Address' }, smtp.from, null),
         ],
       };
     },
@@ -1102,9 +1170,11 @@ const CFG_SECTIONS = [
   {
     id: 'cfg.proxy', chapter: 'cfg', kind: 'table',
     title: { fr: 'Proxy HTTP', en: 'HTTP Proxy' },
-    keys: ['cluster_v2'],
+    keys: ['v4_clusters', 'cluster_v2'],
     build: (ctx) => {
-      const proxies = ctx.cluster.one('cluster_v2')?.http_proxies || [];
+      const v4 = (ctx.cluster.list('v4_clusters')[0]?.network?.httpProxyList || [])
+        .map(p => ({ name: p.name, address: addr(p.ipAddress), port: p.port, proxy_types: p.proxyTypes, username: p.username }));
+      const proxies = v4.length ? v4 : (ctx.cluster.one('cluster_v2')?.http_proxies || []);
       if (!proxies.length) return null;
       return {
         columns: [
@@ -1136,10 +1206,22 @@ const CFG_SECTIONS = [
   {
     id: 'cfg.encryption', chapter: 'cfg', kind: 'kv',
     title: { fr: 'Chiffrement', en: 'Encryption' },
-    keys: ['cluster_v2'],
+    keys: ['v4_clusters', 'v4_disks', 'v4_key_management_servers', 'cluster_v2'],
     build: (ctx) => {
-      const cl = ctx.cluster.one('cluster_v2');
-      if (!cl) return null;
+      // v4 d'abord, quand le champ est présent ; sinon la v2 du PE ; sinon « non activé » (la v4 omet
+      // ce qui n'est pas configuré, vu sur pc.7.6).
+      const cfg = ctx.cluster.list('v4_clusters')[0]?.config;
+      const v2 = ctx.cluster.one('cluster_v2');
+      const cl = v2 || {};
+      if (!cfg && !v2) return null;
+      const options = [].concat(cfg?.encryptionOption || []);
+      const atRest = options.length ? options.map(o => ctx.f.label(o)).join(', ') : ctx.f.bool(v2 ? cl.encrypted : false);
+      const disks = ctx.cluster.list('v4_disks');
+      const sed = disks.some(d => d.diskAdvanceConfig?.isSelfEncryptingDrive != null)
+        ? disks.some(d => d.diskAdvanceConfig?.isSelfEncryptingDrive === true) : !!cl.has_self_encrypting_drive;
+      const inTransit = cfg?.encryptionInTransitStatus
+        ? cfg.encryptionInTransitStatus === 'ENABLED' : !!cl.data_in_transit_encryption_dto?.enabled;
+      const kms = ctx.pc.list('v4_key_management_servers').map(k => k.name).filter(Boolean);
       const encrypted = [
         ...ctx.cluster.list('v4_storage_containers').filter(c => c.isSoftwareEncryptionEnabled),
         ...ctx.cluster.list('storage_containers_v2').filter(c => c.enable_software_encryption),
@@ -1147,10 +1229,12 @@ const CFG_SECTIONS = [
       const none = ctx.lang === 'en' ? 'None' : 'Aucun';
       return {
         rows: [
-          ctx.kv({ fr: 'Données au repos', en: 'Data-at-Rest Encryption' }, ctx.f.bool(cl.encrypted), null),
-          ctx.kv({ fr: 'Disques auto-chiffrants', en: 'Self-Encrypting Drives' }, ctx.f.bool(cl.has_self_encrypting_drive), null),
+          ctx.kv({ fr: 'Données au repos', en: 'Data-at-Rest Encryption' }, atRest, null),
+          ...(cfg?.encryptionScope ? [ctx.kv({ fr: 'Portée', en: 'Scope' }, ctx.f.label(cfg.encryptionScope), null)] : []),
+          ctx.kv({ fr: 'Disques auto-chiffrants', en: 'Self-Encrypting Drives' }, ctx.f.bool(sed), null),
           ctx.kv({ fr: 'Containers chiffrés (logiciel)', en: 'Software-Encrypted Containers' }, [...new Set(encrypted)].join(', ') || none, null),
-          ctx.kv({ fr: 'Données en transit', en: 'Data-in-Transit Encryption' }, ctx.f.bool(cl.data_in_transit_encryption_dto?.enabled), null),
+          ctx.kv({ fr: 'Données en transit', en: 'Data-in-Transit Encryption' }, ctx.f.bool(inTransit), null),
+          ...(kms.length ? [ctx.kv({ fr: 'Serveurs de clés (KMS)', en: 'Key Management Servers' }, kms.join(', '), null)] : []),
         ],
       };
     },
@@ -1200,16 +1284,23 @@ const CFG_SECTIONS = [
   {
     id: 'cfg.alerts', chapter: 'cfg', kind: 'kv',
     title: { fr: 'Alertes', en: 'Alert Configuration' },
-    keys: ['alerts_config_v1'],
+    keys: ['v4_clusters', 'alerts_config_v1'],
     build: (ctx) => {
+      // Pulse se lit en v4 ; l'alerting e-mail propre au cluster n'existe qu'en v1 (PE). Celui du
+      // Prism Central est au chapitre Prism Central.
       const cfg = ctx.cluster.one('alerts_config_v1');
-      if (!cfg) return null;
+      const pulse = ctx.cluster.list('v4_clusters')[0]?.config?.pulseStatus;
+      const pulseOn = pulse?.isEnabled ?? ctx.cluster.one('pulse_v1')?.enable;
+      if (!cfg && pulseOn == null) return null;
       return {
         rows: [
-          ctx.kv({ fr: 'Alertes activées', en: 'Alerts Enabled' }, ctx.f.bool(cfg.enable), null),
-          ctx.kv({ fr: 'Digest quotidien', en: 'Email Digest Enabled' }, ctx.f.bool(cfg.enableEmailDigest), null),
-          ctx.kv({ fr: 'Pulse activé', en: 'Pulse Enabled' }, ctx.f.bool(ctx.cluster.one('pulse_v1')?.enable), null),
-          ctx.kv({ fr: 'Destinataires', en: 'Email Contact List' }, ctx.f.joinList(cfg.emailContactList), null),
+          ...(cfg ? [
+            ctx.kv({ fr: 'Alertes activées', en: 'Alerts Enabled' }, ctx.f.bool(cfg.enable), null),
+            ctx.kv({ fr: 'Digest quotidien', en: 'Email Digest Enabled' }, ctx.f.bool(cfg.enableEmailDigest), null),
+          ] : []),
+          ctx.kv({ fr: 'Pulse activé', en: 'Pulse Enabled' }, ctx.f.bool(pulseOn), null),
+          ...(pulse?.piiScrubbingLevel ? [ctx.kv({ fr: 'Anonymisation Pulse', en: 'Pulse PII Scrubbing' }, ctx.f.label(pulse.piiScrubbingLevel), null)] : []),
+          ...(cfg ? [ctx.kv({ fr: 'Destinataires', en: 'Email Contact List' }, ctx.f.joinList(cfg.emailContactList), null)] : []),
         ],
       };
     },

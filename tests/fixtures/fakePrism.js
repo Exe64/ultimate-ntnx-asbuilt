@@ -24,18 +24,25 @@ export function startFakePrism({ hosts = 1, flowEnabled = true } = {}) {
       if (pathname.endsWith('/config/clusters')) return Response.json({ data: [
         { extId: 'pc-1', name: 'PC', config: { clusterFunction: ['PRISM_CENTRAL'], buildInfo: { version: 'pc.7.5' } },
           nodes: { nodeList: [{ controllerVmIp: { ipv4: { value: '10.0.0.50' } } }] } },
-        { extId: 'c-1', name: 'Gondor', config: { clusterFunction: ['AOS'], buildInfo: { version: '7.0' } },
-          network: { externalAddress: { ipv4: { value: self } } } },
+        // Plan #17 : SMTP, proxy, NCC et Pulse lus en v4 (formes de la spec clustermgmt, vues sur pc.7.6).
+        { extId: 'c-1', name: 'Gondor', config: { clusterFunction: ['AOS'], buildInfo: { version: '7.0' },
+          clusterSoftwareMap: [{ softwareType: 'NCC', version: 'ncc-5.1.0' }], pulseStatus: { isEnabled: true } },
+          network: { externalAddress: { ipv4: { value: self } },
+            smtpServer: { emailAddress: 'asbuilt@gondor.local', type: 'STARTTLS', server: { ipAddress: { ipv4: { value: '10.0.0.7' } }, port: 25, password: 'k-smtp' } },
+            httpProxyList: [{ name: 'proxy', ipAddress: { ipv4: { value: '10.0.0.8' } }, port: 3128, proxyTypes: ['HTTP', 'HTTPS'], username: 'svc', password: 'k-proxy' }] } },
       ] });
       if (/host[-_]nics$/.test(pathname)) {
         stats.maxInFlight = Math.max(stats.maxInFlight, ++stats.inFlight);
         await Bun.sleep(15);
         stats.inFlight--;
-        const nic = { name: 'eth0', link_speed_in_kbps: 10000000 };
-        return Response.json(pathname.includes('/v2.0/') ? [nic] : { data: [nic] });
+        // Vitesses différentes selon l'API, pour vérifier que la v4 l'emporte.
+        return Response.json(pathname.includes('/v2.0/')
+          ? [{ name: 'eth0', link_speed_in_kbps: 10000000 }]
+          : { data: [{ name: 'eth0', linkSpeedInKbps: 25000000, linkCapacityInMbps: 25000, interfaceStatus: 1 }] });
       }
       if (pathname.endsWith('/config/hosts')) return Response.json({
-        data: names.map(([extId, hostName]) => ({ extId, hostName, cluster: { extId: 'c-1' } })),
+        // Un hôte v4 désigne son cluster par `cluster.uuid` sur pc.7.6 (et non `cluster.extId`).
+        data: names.map(([extId, hostName]) => ({ extId, hostName, cluster: { uuid: 'c-1' } })),
       });
       if (pathname.endsWith('/config/domain-managers')) return Response.json({ data: [{ extId: 'dm-1', hostingClusterExtId: 'c-1',
         config: { credentials: [{ username: 'admin', password: 'k-pcpass' }], name: 'PC', size: 'SMALL', buildInfo: { version: 'pc.7.5' }, resourceConfig: { numVcpus: 6, memorySizeBytes: 26 * 2 ** 30, dataDiskSizeBytes: 500 * 2 ** 30 } },
@@ -69,6 +76,29 @@ export function startFakePrism({ hosts = 1, flowEnabled = true } = {}) {
         { name: 'vg-sql', clusterReference: 'c-1', usageType: 'USER', sharingStatus: 'SHARED', targetName: 'iqn-vg-sql', iscsiFeatures: { targetSecret: 'k-chap' } },
         { name: 'vg-nke', clusterReference: 'c-1', isHidden: true },
       ] });
+      // Plan #17 : ce que demandait le Prism Element, lu sur le PC.
+      if (pathname.endsWith('/config/clusters/c-1/cvms')) return Response.json({ data: [
+        { name: 'gondor-1-CVM', clusterExtId: 'c-1', numVcpus: 1, memorySizeBytes: 32 * 2 ** 30, ipAddress: { ipv4: { value: '10.0.0.21' } } },
+      ] });
+      if (pathname.endsWith('/config/disks')) return Response.json({ data: [
+        { nodeExtId: 'h-1', hostName: 'gondor-1', clusterExtId: 'c-1', storagePoolExtId: 'sp-1', diskSizeBytes: 2 ** 40, serialNumber: 'D-1',
+          storageTier: 'SSD', status: 'NORMAL', diskAdvanceConfig: { isSelfEncryptingDrive: false } },
+      ] });
+      if (pathname.endsWith('/config/entitlements')) return Response.json({ data: [
+        { extId: 'c-1', name: 'Gondor', isRegistered: true, details: [{ name: 'NCI Pro', category: 'PRO', earliestExpiryDate: '2030-01-01' }] },
+        { extId: 'pc-1', name: 'PC', isRegistered: false, isMulticluster: true },
+      ] });
+      if (pathname.endsWith('/config/compliances')) return Response.json({ data: [
+        { extId: 'c-1', services: [{ name: 'AOS', licenseType: 'PRO', isCompliant: true }] },
+      ] });
+      if (pathname.endsWith('/config/recovery-plans')) return Response.json({ data: [
+        { name: 'RP-Gondor', primaryLocation: { clusters: [{ extId: 'c-1' }] }, recoveryLocation: { domainManagerExtId: 'pc-remote' } },
+      ] });
+      if (pathname.endsWith('/serviceability/alerts/email-config')) return Response.json({ data: {
+        isEnabled: true, isEmailDigestEnabled: false, emailContactList: ['ops@gondor.local'], hasDefaultNutanixEmail: true, defaultNutanixEmail: 'nos-alerts@nutanix.com',
+      } });
+      if (pathname.endsWith('/config/key-management-servers')) return Response.json({ data: [{ name: 'kms-gondor', clientSecret: 'k-kms' }] });
+      if (pathname.endsWith('/authn/saml-identity-providers')) return Response.json({ data: [{ name: 'adfs', idpMetadataUrl: 'https://adfs.gondor.local/metadata' }] });
       if (pathname.endsWith('/config/protection-policies')) return Response.json({ data: [{ name: 'Gold' }] });
       if (pathname.endsWith('/v1/storage_pools')) return Response.json({ entities: [{ name: 'default-storage-pool', storagePoolUuid: 'sp-1', capacity: 2 ** 41 }] });
       if (pathname.endsWith('/v1/snmp')) return Response.json({ enabled: true, snmpUsers: [{ username: 'peuser', authType: 'SHA', authKey: 'k-peauth', privType: 'AES', privKey: 'k-pepriv' }] });

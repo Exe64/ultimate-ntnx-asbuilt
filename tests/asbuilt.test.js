@@ -6,6 +6,7 @@ import * as docx from 'docx';
 import { collectPcBundle, collectPes } from '../server/bundle.js';
 import { mapLimit, HOST_CONCURRENCY } from '../server/prism/collect.js';
 import { buildAsBuiltModel } from '../engine/asbuilt/asBuiltModel';
+import { normalizeCluster } from '../engine/asbuilt/normalize';
 import { generateAsBuiltDocx } from '../engine/asbuilt/exportAsBuiltDocx';
 import { cleanModel } from '../web/clean';
 import { SECTIONS } from '../engine/asbuilt/sections';
@@ -99,8 +100,12 @@ test('collecte sur un Prism auto-signé → bundle → .docx', async () => {
     expect(kv('pc.info')).toMatchObject({ Nom: 'PC', FQDN: 'pc.gondor.local', Version: 'pc.7.5', Taille: 'Small', 'Déploiement': 'Une VM', 'Cluster hôte': 'Gondor' });
     expect(kv('pc.addressing')).toMatchObject({ 'Adresse virtuelle': '10.0.0.40', 'IP des VM': '10.0.0.50', DNS: '10.0.0.2', NTP: 'pool.ntp.org' });
     expect(cells('pc.resources')).toEqual([['PCVM-1', '10.0.0.50', 6, '26.00 Go', '500.00 Go']]);
-    // SNMP du PE lu sous `snmpUsers` (forme réelle de /v1/snmp, vue sur le lab).
-    expect(buildAsBuiltModel({ bundle, lang: 'fr', enabled: null }).sections.find(x => x.id === 'cfg.snmp').rows.map(r => r.cells)).toEqual([['peuser', 'AES', 'SHA']]);
+    // SNMP : la v4 l'emporte ; sans elle, le PE est lu sous `snmpUsers` (forme réelle de /v1/snmp, vue sur le lab).
+    const snmpOf = (b) => buildAsBuiltModel({ bundle: b, lang: 'fr', enabled: null }).sections.find(x => x.id === 'cfg.snmp').rows.map(r => r.cells);
+    expect(snmpOf(bundle)[0][0]).toBe('snmpuser');
+    const peOnly = structuredClone(bundle);
+    for (const c of peOnly.clusters) delete c.data.v4_snmp;
+    expect(snmpOf(peOnly)).toEqual([['peuser', 'AES', 'SHA']]);
     expect(cells('pc.versions')).toEqual([['Prism Central', 'pc.7.5'], ['NCC', '5.1']]);
     const order = sheet.filter(x => x.chapter === 'pc').map(x => x.id);
     expect(order.slice(0, 5)).toEqual(['pc.overview', 'pc.info', 'pc.addressing', 'pc.resources', 'pc.versions']);
@@ -112,7 +117,11 @@ test('collecte sur un Prism auto-signé → bundle → .docx', async () => {
     expect(cells('cfg.proxy')).toEqual([['proxy', '10.0.0.8', 3128, 'HTTP, HTTPS', 'svc']]);
     expect(kv('cfg.certificate')).toMatchObject({ Sujet: 'CN=localhost', 'Émetteur': 'CN=localhost', 'Algorithme de clé': 'RSA_2048' });
     expect(kv('cfg.certificate')["Valide jusqu'au"]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(kv('cfg.encryption')).toEqual({ 'Données au repos': 'Non', 'Disques auto-chiffrants': 'Non', 'Containers chiffrés (logiciel)': 'Aucun', 'Données en transit': 'Oui' });
+    // En transit : champ absent en v4, la v2 du PE fait foi. KMS lus sur le PC (plan #17).
+    expect(kv('cfg.encryption')).toEqual({ 'Données au repos': 'Non', 'Disques auto-chiffrants': 'Non', 'Containers chiffrés (logiciel)': 'Aucun', 'Données en transit': 'Oui', 'Serveurs de clés (KMS)': 'kms-gondor' });
+    // Ports : la v4 (25G) l'emporte sur la v2 (10G) ; le pool garde le nom que lui donne le PE.
+    expect(normalizeCluster(bundle.clusters[0]).nodePorts[0].ports).toEqual([{ name: 'eth0', speed: '25G', active: true }]);
+    expect(cells('cfg.pools')).toEqual([['default-storage-pool', 'sp-1', '2.00 To', null]]);
     expect(cells('pc.images')).toEqual([['ubuntu-24.04', 'DISK_IMAGE', '4.00 Go', 'Gondor']]);
     expect(cells('pc.flow')).toEqual([['web-app', 'APPLICATION', 'ENFORCE', null]]);
     expect(cells('pc.files')).toEqual([['files01', null, null]]);
@@ -127,6 +136,50 @@ test('collecte sur un Prism auto-signé → bundle → .docx', async () => {
     const text = await textOf(await generateAsBuiltDocx(docx, model, { template: TEMPLATE, outputType: 'nodebuffer', lang: 'fr' }));
     for (const s of ['Gondor', 'gondor-1', 'SN-42', 'Minas Tirith', 'Informations du Prism Central', 'pc.gondor.local', 'Syslog', 'Nutanix Volumes', 'vg-sql']) expect(text).toContain(s);
     expect(text).not.toContain('secret');
+  } finally { prism.stop(); }
+});
+
+// Plan #17 : avec les seuls identifiants du PC, le document ne perd que ce que seul le PE expose.
+test('PC seul : le document se passe du Prism Element', async () => {
+  const prism = startFakePrism();
+  try {
+    const bundle = await collectPcBundle({ pcHost: prism.host, pcUser: 'admin', pcPass: 'secret', ignoreSSL: true });
+    expect(prism.seen.some(p => p.includes('/PrismGateway/'))).toBe(false);
+    expect(bundle.pc.source.errors.map(e => e.key).filter(k => /cvms|host_nics|license_(entitlements|compliances)|recovery_plans|key_management|saml|alert_email|disks/.test(k))).toEqual([]);
+    expect(JSON.stringify(bundle)).not.toMatch(/k-smtp|k-proxy|k-kms/);
+
+    const sheet = buildAsBuiltModel({ bundle, lang: 'fr' }).sections;
+    const get = (id) => sheet.find(x => x.id === id);
+    const kv = (id) => Object.fromEntries(get(id).rows.map(r => [r.label, r.value]));
+    const cells = (id) => get(id).rows.map(r => r.cells);
+
+    expect(kv('cfg.smtp')).toEqual({ Serveur: '10.0.0.7', Port: 25, 'Sécurité': 'STARTTLS', 'Expéditeur': 'asbuilt@gondor.local' });
+    expect(cells('cfg.proxy')).toEqual([['proxy', '10.0.0.8', 3128, 'HTTP, HTTPS', 'svc']]);
+    expect(kv('cfg.encryption')).toMatchObject({ 'Données au repos': 'Non', 'Disques auto-chiffrants': 'Non', 'Données en transit': 'Non' });
+    expect(kv('cfg.licensing')).toMatchObject({ Licence: 'NCI Pro, échéance 2030-01-01', 'Enregistré': 'Oui', 'Conformité': 'AOS : PRO, conforme' });
+    expect(Object.keys(kv('cfg.licensing'))).not.toContain('Numéro de série du bloc');
+    expect(kv('cfg.alerts')).toEqual({ 'Pulse activé': 'Oui' });
+    // Pool : identifiant et capacité tirés des disques v4 ; le nom n'existe qu'au PE.
+    expect(cells('cfg.pools')).toEqual([[null, 'sp-1', '1.00 To', null]]);
+    // CVM : mémoire v4, vCPU non repris (numVcpus v4 non fiable).
+    expect(cells('cfg.cvm')[0][0]).toBe('gondor-1-CVM');
+    expect(cells('cfg.cvm')[0][1]).toBe('32.00 Go');
+    expect(cells('cfg.cvm')[0][3]).toBe('10.0.0.21');
+    expect(kv('pc.alerts')).toMatchObject({ 'Alertes par e-mail': 'Oui', Destinataires: 'ops@gondor.local', 'Copie au support Nutanix': 'nos-alerts@nutanix.com' });
+    expect(cells('pc.recoveryplans')).toEqual([['RP-Gondor', 'Gondor', 'Prism Central distant', null]]);
+    expect(cells('sec.directories')).toContainEqual(['adfs', 'SAML', null, 'https://adfs.gondor.local/metadata', null]);
+
+    const view = normalizeCluster(bundle.clusters[0]);
+    expect(view.nccVersion).toBe('5.1.0');
+    expect(view.nodePorts[0].ports).toEqual([{ name: 'eth0', speed: '25G', active: true }]);
+    expect(view.nodes[0].storageTb).toBe(1);
+
+    // Ce que seul le PE expose dit pourquoi il manque, au lieu de passer pour « Non configuré ».
+    for (const id of ['cfg.ha', 'cfg.auth', 'cfg.dataprotection']) {
+      expect(get(id).emptyText).toBe('Non collecté — disponible avec les identifiants Prism Element');
+    }
+    expect(buildAsBuiltModel({ bundle, lang: 'en' }).sections.find(x => x.id === 'cfg.ha').emptyText)
+      .toBe('Not collected — available with Prism Element credentials');
   } finally { prism.stop(); }
 });
 

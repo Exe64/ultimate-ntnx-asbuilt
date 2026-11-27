@@ -44,6 +44,9 @@ const REASONS = {
   missing:          { fr: 'donnée absente de la collecte', en: 'not part of the collection' },
   unattributed:     { fr: 'donnée non rattachable à un cluster', en: 'data could not be tied to a cluster' },
   'not-registered': { fr: 'cluster non enregistré sur ce Prism Central', en: 'cluster not registered on this Prism Central' },
+  // Raisons posées par la collecte (server/bundle.js) quand le Prism Element n'est pas interrogé.
+  'identifiants Prism Element non fournis': { fr: 'disponible avec les identifiants Prism Element', en: 'available with Prism Element credentials' },
+  'adresse du Prism Element inconnue': { fr: 'adresse du Prism Element inconnue', en: 'Prism Element address unknown' },
 };
 
 // Valeurs brutes de l'API, telles qu'un lecteur n'a pas à les décoder. Une valeur absente de la
@@ -70,6 +73,11 @@ const VALUE_LABELS = {
   BALANCE_SLB:          { fr: 'Balance-SLB', en: 'Balance-SLB' },
   BALANCE_TCP:          { fr: 'Balance-TCP (LACP)', en: 'Balance-TCP (LACP)' },
   SOFTWARE:             { fr: 'Logiciel', en: 'Software' },
+  HARDWARE:             { fr: 'Matériel', en: 'Hardware' },
+  SOFTWARE_AND_HARDWARE: { fr: 'Logiciel et matériel', en: 'Software and hardware' },
+  NO_LICENSE:           { fr: 'Sans licence', en: 'No license' },
+  UNLICENSED_CLUSTER:   { fr: 'Cluster sans licence', en: 'Unlicensed cluster' },
+  SUCCESS:              { fr: 'Établie', en: 'Established' },
   FIRMWARE:             { fr: 'Firmware', en: 'Firmware' },
 };
 
