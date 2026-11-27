@@ -33,6 +33,7 @@ illustrated with diagrams drawn from the actual configuration.
 - **Read-only**: a read-only Prism account is enough; nothing is changed on the environment.
 - **Multi-cluster**: every cluster registered on Prism Central is detected and documented.
 - **Prism Central is enough**: the v4 APIs cover the document; Prism Element credentials are an optional add-on.
+- **What the install decided**: uplink bonds and LACP, network segmentation, VM placement and startup rules, blocks, storage resiliency, Prism Central backup, LCM settings and access rights.
 - **Automatic diagrams**: virtual network, physical cabling (from LLDP/CDP) and more, drawn from the collected data.
 - **Your branding**: layout driven by an editable Word template.
 - **Change report**: compare two exported collections and get what changed, as a Word document.
